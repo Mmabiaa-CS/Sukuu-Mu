@@ -14,6 +14,7 @@ import {
   DollarSign,
   ClipboardList,
   BarChart3,
+  Settings,
 } from 'lucide-react';
 import { canManageFinances, canManageClasses, canManageSubjects, canRecordAttendance } from '@/lib/permissions';
 import { useState } from 'react';
@@ -32,6 +33,7 @@ export function DashboardSidebar() {
   const baseMenuItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, show: true },
     { href: '/dashboard/students', label: 'Students', icon: Users, show: true },
+    { href: '/dashboard/settings', label: 'Settings', icon: Settings, show: true },
   ];
 
   const roleMenuItems = [

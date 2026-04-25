@@ -1,0 +1,19 @@
+{
+  "name": "Sukuu Mu School Management System",
+  "short_name": "Sukuu Mu",
+  "description": "School management platform for students, classes, teachers, attendance, and finances.",
+  "start_url": "/login",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f9f9f8",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
