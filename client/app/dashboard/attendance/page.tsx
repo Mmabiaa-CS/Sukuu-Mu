@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useAttendance } from '@/lib/use-attendance';
 import { canRecordAttendance, getTeacherClasses } from '@/lib/permissions';
 import { useRouter } from 'next/navigation';
 import { mockStudents, mockClasses } from '@/lib/mock-data';
+import { Student } from '@/lib/types';
 import { CheckCircle2, X, Clock, Users, CalendarCheck, AlertCircle, ChevronDown } from 'lucide-react';
 
 export default function AttendancePage() {
@@ -15,8 +16,21 @@ export default function AttendancePage() {
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [markingAll, setMarkingAll] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  if (!user) { router.push('/login'); return null; }
+  useEffect(() => {
+    if (!user) {
+      router.replace('/login');
+    }
+  }, [router, user]);
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh] text-sm text-muted-foreground">
+        Redirecting to login...
+      </div>
+    );
+  }
 
   const accessibleClasses = useMemo(() => {
     if (user.role === 'admin' || user.role === 'manager') return mockClasses;
@@ -49,23 +63,36 @@ export default function AttendancePage() {
 
   const handleRecordAttendance = (studentId: string, status: 'present' | 'absent' | 'late') => {
     if (!selectedClass) return;
-    addAttendance({ studentId, classId: selectedClass, date: new Date(selectedDate), status });
+    setActionError(null);
+    try {
+      addAttendance({ studentId, classId: selectedClass, date: new Date(selectedDate), status });
+    } catch (error) {
+      console.error('Failed to record attendance:', error);
+      setActionError('Could not record attendance. Please try again.');
+    }
   };
 
   const handleBulkMarkPresent = () => {
     if (!selectedClass) return;
+    setActionError(null);
     setMarkingAll(true);
-    const records = accessibleStudents
-      .filter((s) => !todayAttendance.find((a) => a.studentId === s.id))
-      .map((s) => ({ studentId: s.id, classId: selectedClass, date: new Date(selectedDate), status: 'present' as const }));
-    if (records.length > 0) recordBulkAttendance(records);
-    setTimeout(() => setMarkingAll(false), 600);
+    try {
+      const records = accessibleStudents
+        .filter((s) => !todayAttendance.find((a) => a.studentId === s.id))
+        .map((s) => ({ studentId: s.id, classId: selectedClass, date: new Date(selectedDate), status: 'present' as const }));
+      if (records.length > 0) recordBulkAttendance(records);
+    } catch (error) {
+      console.error('Failed to mark attendance in bulk:', error);
+      setActionError('Could not mark all students as present. Please try again.');
+    } finally {
+      setTimeout(() => setMarkingAll(false), 600);
+    }
   };
 
   const canRecord = canRecordAttendance(user, selectedClass || undefined);
   const selectedClassName = mockClasses.find((c) => c.id === selectedClass)?.name ?? '';
 
-  const initials = (s) => `${s.firstName?.[0] ?? ''}${s.lastName?.[0] ?? ''}`.toUpperCase();
+  const initials = (s: Student) => `${s.firstName?.[0] ?? ''}${s.lastName?.[0] ?? ''}`.toUpperCase();
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -247,6 +274,23 @@ export default function AttendancePage() {
         </div>
 
         {/* CONTROLS */}
+        {actionError && (
+          <div
+            role="alert"
+            style={{
+              marginBottom: '16px',
+              border: '1px solid #f5c2c7',
+              background: '#fef2f2',
+              color: '#7f1d1d',
+              borderRadius: '8px',
+              padding: '10px 12px',
+              fontSize: '13px',
+            }}
+          >
+            {actionError}
+          </div>
+        )}
+
         <div className="ap-controls">
           <div>
             <label className="ap-field-label">Class</label>

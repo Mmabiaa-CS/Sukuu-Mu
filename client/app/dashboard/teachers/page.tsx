@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useTeachers } from '@/lib/use-teachers';
 import { TeacherFormDialog } from '@/components/teacher-form-dialog';
+import { Teacher } from '@/lib/types';
 import { Plus, Search, MoreHorizontal, Trash2, X } from 'lucide-react';
 
 export default function TeachersPage() {
@@ -17,9 +18,10 @@ export default function TeachersPage() {
   } = useTeachers();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingTeacher, setEditingTeacher] = useState(null);
+  const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const accessibleTeachers = useMemo(() => {
     if (statusFilter === 'all') return filteredTeachers;
@@ -33,14 +35,30 @@ export default function TeachersPage() {
     inactive: filteredTeachers.filter((t) => t.status === 'inactive').length,
   }), [filteredTeachers]);
 
-  const handleAddTeacher = (data) => { addTeacher(data); setIsFormOpen(false); };
-  const handleEditTeacher = (teacher) => { setEditingTeacher(teacher); setIsFormOpen(true); };
+  const handleAddTeacher = (data: Omit<Teacher, 'id'>) => {
+    setActionError(null);
+    try {
+      addTeacher(data);
+      setIsFormOpen(false);
+    } catch (error) {
+      console.error('Failed to add teacher:', error);
+      setActionError('Could not add teacher. Please try again.');
+    }
+  };
+  const handleEditTeacher = (teacher: Teacher) => { setEditingTeacher(teacher); setIsFormOpen(true); };
   const handleFormClose = () => { setIsFormOpen(false); setEditingTeacher(null); };
-  const handleDeleteTeacher = (id) => {
-    if (confirm('Are you sure you want to delete this teacher?')) deleteTeacher(id);
+  const handleDeleteTeacher = (id: string) => {
+    if (!confirm('Are you sure you want to delete this teacher?')) return;
+    setActionError(null);
+    try {
+      deleteTeacher(id);
+    } catch (error) {
+      console.error('Failed to delete teacher:', error);
+      setActionError('Could not delete teacher. Please try again.');
+    }
   };
 
-  const initials = (t) =>
+  const initials = (t: Teacher) =>
     `${t.firstName?.[0] ?? ''}${t.lastName?.[0] ?? ''}`.toUpperCase();
 
   return (
@@ -272,6 +290,24 @@ export default function TeachersPage() {
         </div>
 
         <div className="tp-toolbar">
+          {actionError && (
+            <div
+              role="alert"
+              style={{
+                width: '100%',
+                marginBottom: '4px',
+                border: '1px solid #f5c2c7',
+                background: '#fef2f2',
+                color: '#7f1d1d',
+                borderRadius: '8px',
+                padding: '10px 12px',
+                fontSize: '13px',
+              }}
+            >
+              {actionError}
+            </div>
+          )}
+
           <div className="tp-search-wrap">
             <Search size={14} className="tp-search-icon" />
             <input
@@ -407,9 +443,18 @@ export default function TeachersPage() {
         isOpen={isFormOpen}
         onClose={handleFormClose}
         onSubmit={editingTeacher
-          ? (data) => { updateTeacher(editingTeacher.id, data); setEditingTeacher(null); }
+          ? (data: Omit<Teacher, 'id'>) => {
+              setActionError(null);
+              try {
+                updateTeacher(editingTeacher.id, data);
+                setEditingTeacher(null);
+              } catch (error) {
+                console.error('Failed to update teacher:', error);
+                setActionError('Could not update teacher. Please try again.');
+              }
+            }
           : handleAddTeacher}
-        initialData={editingTeacher}
+        initialData={editingTeacher ?? undefined}
         isEditing={!!editingTeacher}
       />
     </>

@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useSubjects } from '@/lib/use-subjects';
 import { SubjectFormDialog } from '@/components/subject-form-dialog';
+import { Subject } from '@/lib/types';
 import { Plus, Search, MoreHorizontal, Trash2, X } from 'lucide-react';
 
 export default function SubjectsPage() {
@@ -16,14 +17,31 @@ export default function SubjectsPage() {
   } = useSubjects();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingSubject, setEditingSubject] = useState(null);
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const handleAddSubject = (data) => { addSubject(data); setIsFormOpen(false); };
-  const handleEditSubject = (subject) => { setEditingSubject(subject); setIsFormOpen(true); };
+  const handleAddSubject = (data: Omit<Subject, 'id'>) => {
+    setActionError(null);
+    try {
+      addSubject(data);
+      setIsFormOpen(false);
+    } catch (error) {
+      console.error('Failed to add subject:', error);
+      setActionError('Could not create subject. Please try again.');
+    }
+  };
+  const handleEditSubject = (subject: Subject) => { setEditingSubject(subject); setIsFormOpen(true); };
   const handleFormClose = () => { setIsFormOpen(false); setEditingSubject(null); };
-  const handleDeleteSubject = (id) => {
-    if (confirm('Are you sure you want to delete this subject?')) deleteSubject(id);
+  const handleDeleteSubject = (id: string) => {
+    if (!confirm('Are you sure you want to delete this subject?')) return;
+    setActionError(null);
+    try {
+      deleteSubject(id);
+    } catch (error) {
+      console.error('Failed to delete subject:', error);
+      setActionError('Could not delete subject. Please try again.');
+    }
   };
 
   const stats = useMemo(() => {
@@ -173,6 +191,23 @@ export default function SubjectsPage() {
         </div>
 
         {/* TOOLBAR */}
+        {actionError && (
+          <div
+            role="alert"
+            style={{
+              marginBottom: '12px',
+              border: '1px solid #f5c2c7',
+              background: '#fef2f2',
+              color: '#7f1d1d',
+              borderRadius: '8px',
+              padding: '10px 12px',
+              fontSize: '13px',
+            }}
+          >
+            {actionError}
+          </div>
+        )}
+
         <div className="sp-toolbar">
           <div className="sp-search-wrap">
             <Search size={14} className="sp-search-icon" />
@@ -264,9 +299,18 @@ export default function SubjectsPage() {
         isOpen={isFormOpen}
         onClose={handleFormClose}
         onSubmit={editingSubject
-          ? (data) => { updateSubject(editingSubject.id, data); setEditingSubject(null); }
+          ? (data: Omit<Subject, 'id'>) => {
+              setActionError(null);
+              try {
+                updateSubject(editingSubject.id, data);
+                setEditingSubject(null);
+              } catch (error) {
+                console.error('Failed to update subject:', error);
+                setActionError('Could not update subject. Please try again.');
+              }
+            }
           : handleAddSubject}
-        initialData={editingSubject}
+        initialData={editingSubject ?? undefined}
         isEditing={!!editingSubject}
       />
     </>
