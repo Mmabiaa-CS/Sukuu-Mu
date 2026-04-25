@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function LoginPage() {
@@ -15,6 +14,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,97 +33,637 @@ export default function LoginPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
+      <div style={styles.loadingContainer}>
+        <div style={styles.loadingSpinner} />
+        <p style={styles.loadingText}>Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">School</h1>
-          <p className="text-muted-foreground">Management System</p>
-        </div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap');
 
-        <Card className="border shadow-lg">
-          <CardHeader className="space-y-2">
-            <CardTitle>Sign In</CardTitle>
-            <CardDescription>
-              Enter your credentials to access the system
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-foreground">
-                  Email Address
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="admin@school.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={isSubmitting}
-                  required
-                />
+        .login-root {
+          min-height: 100vh;
+          display: flex;
+          font-family: 'DM Sans', sans-serif;
+          background: #0a0a0a;
+        }
+
+        /* ── LEFT PANEL ── */
+        .panel-left {
+          position: relative;
+          width: 58%;
+          overflow: hidden;
+        }
+
+        .panel-left-bg {
+          position: absolute;
+          inset: 0;
+          background-image: url('https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=1400&q=85&auto=format&fit=crop');
+          background-size: cover;
+          background-position: center 30%;
+          filter: grayscale(20%) contrast(1.05);
+          transform: scale(1.03);
+          animation: subtle-zoom 20s ease-in-out infinite alternate;
+        }
+
+        @keyframes subtle-zoom {
+          from { transform: scale(1.03); }
+          to   { transform: scale(1.08); }
+        }
+
+        .panel-left-overlay {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(
+            135deg,
+            rgba(0,0,0,0.72) 0%,
+            rgba(0,0,0,0.35) 55%,
+            rgba(0,0,0,0.60) 100%
+          );
+        }
+
+        .panel-left-content {
+          position: relative;
+          z-index: 2;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          padding: 52px 56px;
+        }
+
+        .brand-mark {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .brand-logo {
+          width: 36px;
+          height: 36px;
+          flex-shrink: 0;
+        }
+
+        .brand-name {
+          font-family: 'Playfair Display', serif;
+          font-size: 22px;
+          font-weight: 600;
+          color: #ffffff;
+          letter-spacing: 0.04em;
+        }
+
+        .hero-text {
+          max-width: 440px;
+        }
+
+        .hero-eyebrow {
+          font-size: 11px;
+          font-weight: 500;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: rgba(255,255,255,0.55);
+          margin-bottom: 20px;
+        }
+
+        .hero-heading {
+          font-family: 'Playfair Display', serif;
+          font-size: clamp(38px, 4vw, 56px);
+          font-weight: 700;
+          line-height: 1.1;
+          color: #ffffff;
+          margin-bottom: 24px;
+        }
+
+        .hero-heading em {
+          font-style: italic;
+          color: rgba(255,255,255,0.75);
+        }
+
+        .hero-sub {
+          font-size: 15px;
+          font-weight: 300;
+          line-height: 1.7;
+          color: rgba(255,255,255,0.6);
+          max-width: 340px;
+        }
+
+        .panel-left-footer {
+          display: flex;
+          align-items: center;
+          gap: 32px;
+        }
+
+        .stat-item {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .stat-number {
+          font-family: 'Playfair Display', serif;
+          font-size: 28px;
+          font-weight: 600;
+          color: #ffffff;
+        }
+
+        .stat-label {
+          font-size: 11px;
+          font-weight: 400;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: rgba(255,255,255,0.45);
+        }
+
+        .stat-divider {
+          width: 1px;
+          height: 36px;
+          background: rgba(255,255,255,0.18);
+        }
+
+        /* ── RIGHT PANEL ── */
+        .panel-right {
+          width: 42%;
+          background: #ffffff;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 60px 52px;
+          position: relative;
+        }
+
+        .panel-right::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          bottom: 0;
+          width: 1px;
+          background: linear-gradient(to bottom, transparent, #e0e0e0 30%, #e0e0e0 70%, transparent);
+        }
+
+        .form-container {
+          width: 100%;
+          max-width: 360px;
+          animation: fade-up 0.6s ease both;
+        }
+
+        @keyframes fade-up {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-header {
+          margin-bottom: 44px;
+        }
+
+        .form-eyebrow {
+          font-size: 11px;
+          font-weight: 500;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: #999;
+          margin-bottom: 12px;
+        }
+
+        .form-title {
+          font-family: 'Playfair Display', serif;
+          font-size: 34px;
+          font-weight: 700;
+          color: #0a0a0a;
+          line-height: 1.1;
+          margin-bottom: 10px;
+        }
+
+        .form-subtitle {
+          font-size: 14px;
+          font-weight: 300;
+          color: #888;
+          line-height: 1.5;
+        }
+
+        .field-group {
+          margin-bottom: 24px;
+        }
+
+        .field-label {
+          display: block;
+          font-size: 11px;
+          font-weight: 500;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: #555;
+          margin-bottom: 10px;
+          transition: color 0.2s;
+        }
+
+        .field-label.focused {
+          color: #0a0a0a;
+        }
+
+        .field-wrapper {
+          position: relative;
+        }
+
+        .field-input {
+          width: 100%;
+          padding: 14px 16px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 15px;
+          font-weight: 400;
+          color: #0a0a0a;
+          background: #f8f8f8;
+          border: 1.5px solid transparent;
+          border-radius: 6px;
+          outline: none;
+          transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+          -webkit-appearance: none;
+        }
+
+        .field-input::placeholder {
+          color: #bbb;
+        }
+
+        .field-input:hover {
+          background: #f4f4f4;
+        }
+
+        .field-input:focus {
+          background: #ffffff;
+          border-color: #0a0a0a;
+          box-shadow: 0 0 0 3px rgba(10,10,10,0.06);
+        }
+
+        .field-input:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .field-underline {
+          position: absolute;
+          bottom: 0;
+          left: 50%;
+          height: 2px;
+          background: #0a0a0a;
+          width: 0;
+          transform: translateX(-50%);
+          transition: width 0.3s ease;
+          border-radius: 0 0 6px 6px;
+        }
+
+        .field-input:focus ~ .field-underline {
+          width: 100%;
+        }
+
+        .error-alert {
+          padding: 12px 14px;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          border-radius: 6px;
+          font-size: 13px;
+          color: #dc2626;
+          margin-bottom: 20px;
+        }
+
+        .submit-btn {
+          width: 100%;
+          padding: 15px 24px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 14px;
+          font-weight: 500;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          color: #ffffff;
+          background: #0a0a0a;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+          position: relative;
+          overflow: hidden;
+          margin-top: 8px;
+        }
+
+        .submit-btn::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: rgba(255,255,255,0);
+          transition: background 0.2s;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+          background: #1a1a1a;
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+        }
+
+        .submit-btn:active:not(:disabled) {
+          transform: translateY(0);
+          box-shadow: none;
+        }
+
+        .submit-btn:disabled {
+          background: #d4d4d4;
+          cursor: not-allowed;
+        }
+
+        .spinner {
+          display: inline-block;
+          width: 14px;
+          height: 14px;
+          border: 2px solid rgba(255,255,255,0.4);
+          border-top-color: #fff;
+          border-radius: 50%;
+          animation: spin 0.7s linear infinite;
+          margin-right: 8px;
+          vertical-align: middle;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        .demo-section {
+          margin-top: 44px;
+          padding-top: 32px;
+          border-top: 1px solid #ebebeb;
+        }
+
+        .demo-label {
+          font-size: 10px;
+          font-weight: 500;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          color: #bbb;
+          margin-bottom: 14px;
+        }
+
+        .demo-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .demo-card {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 14px;
+          background: #f8f8f8;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: background 0.15s;
+          border: 1px solid transparent;
+        }
+
+        .demo-card:hover {
+          background: #f0f0f0;
+          border-color: #e0e0e0;
+        }
+
+        .demo-role {
+          font-size: 12px;
+          font-weight: 500;
+          color: #333;
+          letter-spacing: 0.02em;
+        }
+
+        .demo-cred {
+          font-size: 11px;
+          color: #aaa;
+          font-family: 'Courier New', monospace;
+        }
+
+        .demo-arrow {
+          font-size: 12px;
+          color: #ccc;
+          transition: transform 0.15s, color 0.15s;
+        }
+
+        .demo-card:hover .demo-arrow {
+          transform: translateX(3px);
+          color: #888;
+        }
+
+        .form-footer {
+          margin-top: 24px;
+          text-align: center;
+        }
+
+        .form-footer-text {
+          font-size: 12px;
+          color: #bbb;
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 900px) {
+          .panel-left { display: none; }
+          .panel-right {
+            width: 100%;
+            background-image: url('https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=1400&q=85&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+          }
+          .panel-right::before { display: none; }
+          .panel-right::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(255,255,255,0.93);
+          }
+          .form-container { position: relative; z-index: 1; }
+        }
+      `}</style>
+
+      <div className="login-root">
+
+        {/* ── LEFT: Hero panel ── */}
+        <div className="panel-left">
+          <div className="panel-left-bg" />
+          <div className="panel-left-overlay" />
+          <div className="panel-left-content">
+
+            <div className="brand-mark">
+              <svg className="brand-logo" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="17" y="11" width="2" height="17" rx="1" fill="white" opacity="0.9"/>
+                <path d="M17 13 C12 13 7 15 7 19 L7 28 C12 26 17 28 17 28 Z" fill="white" opacity="0.75"/>
+                <path d="M19 13 C24 13 29 15 29 19 L29 28 C24 26 19 28 19 28 Z" fill="white" opacity="0.55"/>
+                <path d="M11 11 A9 9 0 0 1 25 11" stroke="white" strokeWidth="1.8" strokeLinecap="round" opacity="0.9"/>
+                <line x1="18" y1="2" x2="18" y2="5.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" opacity="0.85"/>
+                <line x1="24" y1="3.8" x2="22.4" y2="6.6" stroke="white" strokeWidth="1.6" strokeLinecap="round" opacity="0.7"/>
+                <line x1="12" y1="3.8" x2="13.6" y2="6.6" stroke="white" strokeWidth="1.6" strokeLinecap="round" opacity="0.7"/>
+                <line x1="27.5" y1="8" x2="25.2" y2="9.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" opacity="0.5"/>
+                <line x1="8.5" y1="8" x2="10.8" y2="9.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" opacity="0.5"/>
+              </svg>
+              <span className="brand-name">Sukuu Mu</span>
+            </div>
+
+            <div className="hero-text">
+              <p className="hero-eyebrow">School Management Platform</p>
+              <h2 className="hero-heading">
+                Everything your school needs,<br />
+                <em>in one place.</em>
+              </h2>
+              <p className="hero-sub">
+                Manage students, staff, timetables, and finances — with clarity and control.
+              </p>
+            </div>
+
+            <div className="panel-left-footer">
+              <div className="stat-item">
+                <span className="stat-number">500+</span>
+                <span className="stat-label">Schools</span>
               </div>
-
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-foreground">
-                  Password
-                </label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isSubmitting}
-                  required
-                />
+              <div className="stat-divider" />
+              <div className="stat-item">
+                <span className="stat-number">120k</span>
+                <span className="stat-label">Students</span>
               </div>
-
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isSubmitting || !email || !password}
-              >
-                {isSubmitting ? 'Signing in...' : 'Sign In'}
-              </Button>
-            </form>
-
-            <div className="mt-6 pt-4 border-t border-border">
-              <p className="text-xs text-muted-foreground mb-3 font-medium">Demo Credentials:</p>
-              <div className="space-y-2 text-xs">
-                <div className="bg-muted p-2 rounded">
-                  <p className="font-medium">Admin</p>
-                  <p className="text-muted-foreground">admin@school.com / admin123</p>
-                </div>
-                <div className="bg-muted p-2 rounded">
-                  <p className="font-medium">Manager</p>
-                  <p className="text-muted-foreground">manager@school.com / manager123</p>
-                </div>
-                <div className="bg-muted p-2 rounded">
-                  <p className="font-medium">Teacher</p>
-                  <p className="text-muted-foreground">teacher@school.com / teacher123</p>
-                </div>
+              <div className="stat-divider" />
+              <div className="stat-item">
+                <span className="stat-number">99.9%</span>
+                <span className="stat-label">Uptime</span>
               </div>
             </div>
-          </CardContent>
-        </Card>
+
+          </div>
+        </div>
+
+        {/* ── RIGHT: Login form ── */}
+        <div className="panel-right">
+          <div className="form-container">
+
+            <div className="form-header">
+              <p className="form-eyebrow">Welcome back</p>
+              <h1 className="form-title">Sign in</h1>
+              <p className="form-subtitle">Enter your credentials to access the dashboard</p>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              {error && (
+                <div className="error-alert">{error}</div>
+              )}
+
+              <div className="field-group">
+                <label
+                  htmlFor="email"
+                  className={`field-label ${focusedField === 'email' ? 'focused' : ''}`}
+                >
+                  Email Address
+                </label>
+                <div className="field-wrapper">
+                  <input
+                    id="email"
+                    type="email"
+                    className="field-input"
+                    placeholder="admin@school.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onFocus={() => setFocusedField('email')}
+                    onBlur={() => setFocusedField(null)}
+                    disabled={isSubmitting}
+                    required
+                  />
+                  <div className="field-underline" />
+                </div>
+              </div>
+
+              <div className="field-group">
+                <label
+                  htmlFor="password"
+                  className={`field-label ${focusedField === 'password' ? 'focused' : ''}`}
+                >
+                  Password
+                </label>
+                <div className="field-wrapper">
+                  <input
+                    id="password"
+                    type="password"
+                    className="field-input"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onFocus={() => setFocusedField('password')}
+                    onBlur={() => setFocusedField(null)}
+                    disabled={isSubmitting}
+                    required
+                  />
+                  <div className="field-underline" />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="submit-btn"
+                disabled={isSubmitting || !email || !password}
+              >
+                {isSubmitting && <span className="spinner" />}
+                {isSubmitting ? 'Signing in...' : 'Sign In →'}
+              </button>
+            </form>
+
+            {/* Demo credentials */}
+            <div className="demo-section">
+              <p className="demo-label">Demo Credentials</p>
+              <div className="demo-grid">
+                {[
+                  { role: 'Admin', cred: 'admin@school.com / admin123', e: 'admin@school.com', p: 'admin123' },
+                  { role: 'Manager', cred: 'manager@school.com / manager123', e: 'manager@school.com', p: 'manager123' },
+                  { role: 'Teacher', cred: 'teacher@school.com / teacher123', e: 'teacher@school.com', p: 'teacher123' },
+                ].map((d) => (
+                  <div
+                    key={d.role}
+                    className="demo-card"
+                    onClick={() => { setEmail(d.e); setPassword(d.p); }}
+                  >
+                    <span className="demo-role">{d.role}</span>
+                    <span className="demo-cred">{d.cred}</span>
+                    <span className="demo-arrow">›</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="form-footer">
+              <p className="form-footer-text">© {new Date().getFullYear()} Sukuu Mu · All rights reserved</p>
+            </div>
+
+          </div>
+        </div>
+
       </div>
-    </div>
+    </>
   );
 }
+
+const styles = {
+  loadingContainer: {
+    minHeight: '100vh',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: '#0a0a0a',
+  },
+  loadingSpinner: {
+    width: 40,
+    height: 40,
+    borderRadius: '50%',
+    border: '2px solid rgba(255,255,255,0.1)',
+    borderTopColor: '#ffffff',
+    animation: 'spin 0.7s linear infinite',
+    marginBottom: 16,
+  },
+  loadingText: {
+    fontFamily: 'DM Sans, sans-serif',
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.4)',
+  },
+};
