@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Users, BookOpen, GraduationCap, BarChart3, ClipboardList } from 'lucide-react';
-import { canRecordAttendance } from '@/lib/permissions';
+
 
 export default function DashboardPage() {
   const { user } = useAuth();
