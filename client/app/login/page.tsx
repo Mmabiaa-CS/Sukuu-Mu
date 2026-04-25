@@ -625,7 +625,7 @@ export default function LoginPage() {
                   >
                     <span className="demo-role">{d.role}</span>
                     <span className="demo-cred">{d.cred}</span>
-                    <span className="demo-arrow">›</span>
+                    <span className="demo-arrow"></span>
                   </div>
                 ))}
               </div>
