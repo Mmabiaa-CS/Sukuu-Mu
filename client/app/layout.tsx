@@ -8,9 +8,9 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'School Management System',
+  title: 'Sukuu Mu',
   description: 'Comprehensive school management platform for students, teachers, and administrators',
-  generator: 'v0.app',
+  authors: [{ name: 'Mmabiaa CS' }],
   icons: {
     icon: [
       {

@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useClasses } from '@/lib/use-classes';
 import { ClassFormDialog } from '@/components/class-form-dialog';
+import { Class } from '@/lib/types';
 import { Plus, Search, MoreHorizontal, Trash2, X } from 'lucide-react';
 
 export default function ClassesPage() {
@@ -18,14 +19,31 @@ export default function ClassesPage() {
   } = useClasses();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingClass, setEditingClass] = useState(null);
+  const [editingClass, setEditingClass] = useState<Class | null>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const handleAddClass = (data) => { addClass(data); setIsFormOpen(false); };
-  const handleEditClass = (cls) => { setEditingClass(cls); setIsFormOpen(true); };
+  const handleAddClass = (data: Omit<Class, 'id' | 'createdAt'>) => {
+    setActionError(null);
+    try {
+      addClass(data);
+      setIsFormOpen(false);
+    } catch (error) {
+      console.error('Failed to add class:', error);
+      setActionError('Could not create class. Please try again.');
+    }
+  };
+  const handleEditClass = (cls: Class) => { setEditingClass(cls); setIsFormOpen(true); };
   const handleFormClose = () => { setIsFormOpen(false); setEditingClass(null); };
-  const handleDeleteClass = (id) => {
-    if (confirm('Are you sure you want to delete this class?')) deleteClass(id);
+  const handleDeleteClass = (id: string) => {
+    if (!confirm('Are you sure you want to delete this class?')) return;
+    setActionError(null);
+    try {
+      deleteClass(id);
+    } catch (error) {
+      console.error('Failed to delete class:', error);
+      setActionError('Could not delete class. Please try again.');
+    }
   };
 
   const stats = useMemo(() => {
@@ -190,6 +208,23 @@ export default function ClassesPage() {
         </div>
 
         {/* TOOLBAR */}
+        {actionError && (
+          <div
+            role="alert"
+            style={{
+              marginBottom: '12px',
+              border: '1px solid #f5c2c7',
+              background: '#fef2f2',
+              color: '#7f1d1d',
+              borderRadius: '8px',
+              padding: '10px 12px',
+              fontSize: '13px',
+            }}
+          >
+            {actionError}
+          </div>
+        )}
+
         <div className="cp-toolbar">
           <div className="cp-search-wrap">
             <Search size={14} className="cp-search-icon" />
@@ -302,9 +337,18 @@ export default function ClassesPage() {
         isOpen={isFormOpen}
         onClose={handleFormClose}
         onSubmit={editingClass
-          ? (data) => { updateClass(editingClass.id, data); setEditingClass(null); }
+          ? (data: Omit<Class, 'id' | 'createdAt'>) => {
+              setActionError(null);
+              try {
+                updateClass(editingClass.id, data);
+                setEditingClass(null);
+              } catch (error) {
+                console.error('Failed to update class:', error);
+                setActionError('Could not update class. Please try again.');
+              }
+            }
           : handleAddClass}
-        initialData={editingClass}
+        initialData={editingClass ?? undefined}
         isEditing={!!editingClass}
       />
     </>
