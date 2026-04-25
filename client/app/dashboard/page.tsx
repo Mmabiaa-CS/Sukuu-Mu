@@ -2,11 +2,8 @@
 
 import { useAuth } from '@/lib/auth-context';
 import { mockStudents, mockClasses, mockSubjects, mockTeachers } from '@/lib/mock-data';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Users, BookOpen, GraduationCap, BarChart3, ClipboardList, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
-import { Users, BookOpen, GraduationCap, BarChart3, ClipboardList } from 'lucide-react';
-
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -16,8 +13,8 @@ export default function DashboardPage() {
       title: 'Total Students',
       value: mockStudents.length,
       icon: Users,
-      color: 'bg-blue-100 text-blue-700',
-      href: '/dashboard/students'
+      href: '/dashboard/students',
+      sub: `${mockStudents.filter(s => s.status === 'active').length} active`,
     }
   ];
 
@@ -26,152 +23,474 @@ export default function DashboardPage() {
       title: 'Total Classes',
       value: mockClasses.length,
       icon: BookOpen,
-      color: 'bg-green-100 text-green-700',
-      href: '/dashboard/classes'
+      href: '/dashboard/classes',
+      sub: 'Academic year 2024–25',
     },
     {
-      title: 'Total Subjects',
+      title: 'Subjects',
       value: mockSubjects.length,
       icon: BarChart3,
-      color: 'bg-purple-100 text-purple-700',
-      href: '/dashboard/subjects'
+      href: '/dashboard/subjects',
+      sub: 'Across all classes',
     },
     {
-      title: 'Total Teachers',
+      title: 'Teaching Staff',
       value: mockTeachers.length,
       icon: GraduationCap,
-      color: 'bg-orange-100 text-orange-700',
-      href: '/dashboard/teachers'
+      href: '/dashboard/teachers',
+      sub: 'Active members',
     }
   ];
 
-  const teacherStats = user?.role === 'teacher' ? [
+  const teacherStats = [
     {
       title: 'Attendance',
       value: 'Manage',
       icon: ClipboardList,
-      color: 'bg-red-100 text-red-700',
-      href: '/dashboard/attendance'
+      href: '/dashboard/attendance',
+      sub: 'Record today\'s sessions',
     }
-  ] : [];
+  ];
 
-  const stats = user?.role === 'teacher' 
+  const stats = user?.role === 'teacher'
     ? [...baseStats, ...teacherStats]
     : [...baseStats, ...adminStats];
 
+  const roleLabel =
+    user?.role === 'admin' ? 'Administrator'
+    : user?.role === 'manager' ? 'Manager'
+    : user?.role === 'teacher' ? 'Teacher'
+    : 'Staff';
+
+  const roleDescription =
+    user?.role === 'admin' ? 'Manage your school system efficiently'
+    : user?.role === 'manager' ? 'Oversee school operations'
+    : user?.role === 'teacher' ? 'Manage your classes and students'
+    : 'View your academic information';
+
+  const quickActions =
+    user?.role === 'teacher'
+      ? [
+          { label: 'View Students', href: '/dashboard/students' },
+          { label: 'Record Attendance', href: '/dashboard/attendance' },
+        ]
+      : [
+          { label: 'Add New Student', href: '/dashboard/students' },
+          { label: 'Create Class', href: '/dashboard/classes' },
+          { label: 'Add Subject', href: '/dashboard/subjects' },
+          { label: 'View Teachers', href: '/dashboard/teachers' },
+        ];
+
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-4xl font-bold text-foreground">Welcome, {user?.firstName}!</h1>
-        <p className="text-muted-foreground mt-2">
-          {user?.role === 'admin'
-            ? 'Manage your school system efficiently'
-            : user?.role === 'manager'
-            ? 'Oversee school operations'
-            : user?.role === 'teacher'
-            ? 'Manage your classes and students'
-            : 'View your academic information'}
-        </p>
-      </div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap');
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.title} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                <div className={`p-2 rounded-lg ${stat.color}`}>
-                  <Icon className="h-4 w-4" />
+        .db-root {
+          font-family: 'DM Sans', sans-serif;
+          color: #0a0a0a;
+          background: #f9f9f8;
+          min-height: 100vh;
+          padding: 48px 52px;
+          max-width: 1200px;
+          margin: 0 auto;
+          animation: db-fadein 0.5s ease both;
+        }
+
+        @keyframes db-fadein {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── HEADER ── */
+        .db-header {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          margin-bottom: 52px;
+          padding-bottom: 36px;
+          border-bottom: 1px solid #e8e8e6;
+        }
+
+        .db-header-left {}
+
+        .db-role-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 10px;
+          font-weight: 500;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          color: #888;
+          margin-bottom: 10px;
+        }
+
+        .db-role-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #0a0a0a;
+        }
+
+        .db-greeting {
+          font-family: 'Playfair Display', serif;
+          font-size: clamp(30px, 3vw, 44px);
+          font-weight: 700;
+          line-height: 1.1;
+          color: #0a0a0a;
+          margin-bottom: 8px;
+        }
+
+        .db-greeting em {
+          font-style: italic;
+          color: #555;
+        }
+
+        .db-sub {
+          font-size: 14px;
+          font-weight: 300;
+          color: #999;
+        }
+
+        .db-date {
+          text-align: right;
+        }
+
+        .db-date-day {
+          font-family: 'Playfair Display', serif;
+          font-size: 42px;
+          font-weight: 600;
+          color: #0a0a0a;
+          line-height: 1;
+        }
+
+        .db-date-rest {
+          font-size: 12px;
+          color: #aaa;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          margin-top: 4px;
+        }
+
+        /* ── STAT CARDS ── */
+        .db-stats {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+          gap: 16px;
+          margin-bottom: 32px;
+          animation: db-fadein 0.5s 0.1s ease both;
+        }
+
+        .db-stat-card {
+          background: #ffffff;
+          border: 1px solid #e8e8e6;
+          border-radius: 10px;
+          padding: 24px 26px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          text-decoration: none;
+          color: inherit;
+          position: relative;
+          overflow: hidden;
+          transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+        }
+
+        .db-stat-card::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0;
+          height: 2px;
+          background: #0a0a0a;
+          transform: scaleX(0);
+          transform-origin: left;
+          transition: transform 0.3s ease;
+        }
+
+        .db-stat-card:hover {
+          border-color: #c8c8c6;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+          transform: translateY(-2px);
+        }
+
+        .db-stat-card:hover::before {
+          transform: scaleX(1);
+        }
+
+        .db-stat-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .db-stat-icon {
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          background: #f4f4f3;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #0a0a0a;
+        }
+
+        .db-stat-arrow {
+          color: #ccc;
+          transition: color 0.2s, transform 0.2s;
+        }
+
+        .db-stat-card:hover .db-stat-arrow {
+          color: #0a0a0a;
+          transform: translate(2px, -2px);
+        }
+
+        .db-stat-value {
+          font-family: 'Playfair Display', serif;
+          font-size: 36px;
+          font-weight: 700;
+          color: #0a0a0a;
+          line-height: 1;
+        }
+
+        .db-stat-title {
+          font-size: 12px;
+          font-weight: 500;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          color: #888;
+          margin-bottom: 2px;
+        }
+
+        .db-stat-sub {
+          font-size: 12px;
+          font-weight: 300;
+          color: #bbb;
+        }
+
+        /* ── BOTTOM GRID ── */
+        .db-bottom {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+          animation: db-fadein 0.5s 0.2s ease both;
+        }
+
+        @media (max-width: 700px) {
+          .db-root { padding: 28px 20px; }
+          .db-header { flex-direction: column; align-items: flex-start; gap: 20px; }
+          .db-date { text-align: left; }
+          .db-bottom { grid-template-columns: 1fr; }
+        }
+
+        /* ── PANEL ── */
+        .db-panel {
+          background: #ffffff;
+          border: 1px solid #e8e8e6;
+          border-radius: 10px;
+          padding: 28px 30px;
+        }
+
+        .db-panel-title {
+          font-size: 10px;
+          font-weight: 500;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          color: #aaa;
+          margin-bottom: 20px;
+        }
+
+        /* ── QUICK ACTIONS ── */
+        .db-actions-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .db-action-btn {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 13px 16px;
+          background: #f7f7f6;
+          border: 1px solid transparent;
+          border-radius: 8px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 13px;
+          font-weight: 400;
+          color: #333;
+          text-decoration: none;
+          cursor: pointer;
+          transition: background 0.15s, border-color 0.15s, color 0.15s;
+        }
+
+        .db-action-btn:hover {
+          background: #0a0a0a;
+          color: #ffffff;
+          border-color: #0a0a0a;
+        }
+
+        .db-action-btn:hover .db-action-icon {
+          color: rgba(255,255,255,0.6);
+        }
+
+        .db-action-icon {
+          color: #ccc;
+          transition: color 0.15s;
+        }
+
+        /* ── SYSTEM INFO ── */
+        .db-info-list {
+          display: flex;
+          flex-direction: column;
+          gap: 0;
+        }
+
+        .db-info-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 14px 0;
+          border-bottom: 1px solid #f0f0ee;
+        }
+
+        .db-info-row:last-child {
+          border-bottom: none;
+          padding-bottom: 0;
+        }
+
+        .db-info-row:first-child {
+          padding-top: 0;
+        }
+
+        .db-info-label {
+          font-size: 13px;
+          font-weight: 300;
+          color: #aaa;
+        }
+
+        .db-info-value {
+          font-size: 13px;
+          font-weight: 500;
+          color: #0a0a0a;
+        }
+
+        .db-info-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          background: #f0f0ee;
+          border-radius: 20px;
+          padding: 4px 10px;
+          font-size: 11px;
+          font-weight: 500;
+          color: #555;
+        }
+
+        .db-info-pill-dot {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: #0a0a0a;
+        }
+      `}</style>
+
+      <div className="db-root">
+
+        {/* ── HEADER ── */}
+        <div className="db-header">
+          <div className="db-header-left">
+            <div className="db-role-badge">
+              <div className="db-role-dot" />
+              {roleLabel}
+            </div>
+            <h1 className="db-greeting">
+              Good morning, <em>{user?.firstName}.</em>
+            </h1>
+            <p className="db-sub">{roleDescription}</p>
+          </div>
+          <div className="db-date">
+            <div className="db-date-day">
+              {new Date().getDate()}
+            </div>
+            <div className="db-date-rest">
+              {new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
+            </div>
+          </div>
+        </div>
+
+        {/* ── STAT CARDS ── */}
+        <div className="db-stats">
+          {stats.map((stat, i) => {
+            const Icon = stat.icon;
+            return (
+              <Link key={stat.title} href={stat.href} className="db-stat-card" style={{ animationDelay: `${i * 0.07}s` }}>
+                <div className="db-stat-top">
+                  <div className="db-stat-icon">
+                    <Icon size={16} />
+                  </div>
+                  <ArrowUpRight size={16} className="db-stat-arrow" />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <Link href={stat.href}>
-                  <Button variant="link" className="p-0 h-auto text-xs mt-2">
-                    View Details →
-                  </Button>
+                <div>
+                  <div className="db-stat-value">{stat.value}</div>
+                </div>
+                <div>
+                  <div className="db-stat-title">{stat.title}</div>
+                  <div className="db-stat-sub">{stat.sub}</div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* ── BOTTOM GRID ── */}
+        <div className="db-bottom">
+
+          {/* Quick Actions */}
+          <div className="db-panel">
+            <div className="db-panel-title">Quick Actions</div>
+            <div className="db-actions-list">
+              {quickActions.map((action) => (
+                <Link key={action.label} href={action.href} className="db-action-btn">
+                  <span>{action.label}</span>
+                  <ArrowUpRight size={14} className="db-action-icon" />
                 </Link>
-              </CardContent>
-            </Card>
-          );
-        })}
+              ))}
+            </div>
+          </div>
+
+          {/* System Info */}
+          <div className="db-panel">
+            <div className="db-panel-title">System Overview</div>
+            <div className="db-info-list">
+              <div className="db-info-row">
+                <span className="db-info-label">Academic Year</span>
+                <span className="db-info-value">2024 – 2025</span>
+              </div>
+              <div className="db-info-row">
+                <span className="db-info-label">Enrolled Students</span>
+                <span className="db-info-pill">
+                  <span className="db-info-pill-dot" />
+                  {mockStudents.filter(s => s.status === 'active').length} Active
+                </span>
+              </div>
+              <div className="db-info-row">
+                <span className="db-info-label">Teaching Staff</span>
+                <span className="db-info-value">{mockTeachers.length} Teachers</span>
+              </div>
+              <div className="db-info-row">
+                <span className="db-info-label">Total Classes</span>
+                <span className="db-info-value">{mockClasses.length}</span>
+              </div>
+              <div className="db-info-row">
+                <span className="db-info-label">Subjects Offered</span>
+                <span className="db-info-value">{mockSubjects.length}</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
       </div>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Common tasks you can perform</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {(user?.role === 'admin' || user?.role === 'manager') && (
-              <>
-                <Link href="/dashboard/students">
-                  <Button variant="outline" className="w-full justify-start">
-                    Add New Student
-                  </Button>
-                </Link>
-                <Link href="/dashboard/classes">
-                  <Button variant="outline" className="w-full justify-start">
-                    Create Class
-                  </Button>
-                </Link>
-                <Link href="/dashboard/subjects">
-                  <Button variant="outline" className="w-full justify-start">
-                    Add Subject
-                  </Button>
-                </Link>
-                <Link href="/dashboard/teachers">
-                  <Button variant="outline" className="w-full justify-start">
-                    View Teachers
-                  </Button>
-                </Link>
-              </>
-            )}
-            {user?.role === 'teacher' && (
-              <>
-                <Link href="/dashboard/students">
-                  <Button variant="outline" className="w-full justify-start">
-                    View Students
-                  </Button>
-                </Link>
-                <Link href="/dashboard/attendance">
-                  <Button variant="outline" className="w-full justify-start">
-                    Record Attendance
-                  </Button>
-                </Link>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* System Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle>System Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div>
-              <p className="text-muted-foreground">Academic Year</p>
-              <p className="font-semibold">2024-2025</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Total Enrolled</p>
-              <p className="font-semibold">{mockStudents.filter(s => s.status === 'active').length} Active Students</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Staff Members</p>
-              <p className="font-semibold">{mockTeachers.length} Teachers</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    </>
   );
 }
