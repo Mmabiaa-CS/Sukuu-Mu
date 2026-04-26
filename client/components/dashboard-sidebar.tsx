@@ -122,12 +122,12 @@ export function DashboardSidebar() {
           border-bottom: 1px solid rgba(255,255,255,0.07);
           display: flex;
           align-items: center;
-          gap: 10px;
+          justify-content: center;
         }
 
-        .sb-logo-icon svg {
-          width: 28px;
-          height: 28px;
+        .sb-logo-icon .brand-logo {
+          width: 130px;
+          height: auto;
         }
 
         .sb-logo-text {
@@ -326,14 +326,10 @@ export function DashboardSidebar() {
             <Image 
               src="/logo.png" 
               alt="Sukuu Mu Logo"
-              width={36}
-              height={36}
+              width={130}
+              height={62}
               className="brand-logo"
             />
-            </div>
-            <div>
-              <div className="sb-logo-text">Sukuu Mu</div>
-              <div className="sb-logo-sub">Management System</div>
             </div>
           </div>
 

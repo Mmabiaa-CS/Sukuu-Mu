@@ -93,12 +93,11 @@ export default function LoginPage() {
         .brand-mark {
           display: flex;
           align-items: center;
-          gap: 12px;
         }
 
         .brand-logo {
-          width: 36px;
-          height: 36px;
+          width: 180px;
+          height: auto;
           flex-shrink: 0;
         }
 
@@ -486,11 +485,10 @@ export default function LoginPage() {
             <Image 
               src="/logo.png" 
               alt="Sukuu Mu Logo"
-              width={36}
-              height={36}
+              width={180}
+              height={86}
               className="brand-logo"
             />
-            <span className="brand-name">Sukuu Mu</span>
           </div>
 
             <div className="hero-text">
