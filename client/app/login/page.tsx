@@ -31,15 +31,6 @@ export default function LoginPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div style={styles.loadingContainer}>
-        <div style={styles.loadingSpinner} />
-        <p style={styles.loadingText}>Loading...</p>
-      </div>
-    );
-  }
-
   return (
     <>
       <style>{`
@@ -642,28 +633,3 @@ export default function LoginPage() {
     </>
   );
 }
-
-const styles = {
-  loadingContainer: {
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: '#0a0a0a',
-  },
-  loadingSpinner: {
-    width: 40,
-    height: 40,
-    borderRadius: '50%',
-    border: '2px solid rgba(255,255,255,0.1)',
-    borderTopColor: '#ffffff',
-    animation: 'spin 0.7s linear infinite',
-    marginBottom: 16,
-  },
-  loadingText: {
-    fontFamily: 'DM Sans, sans-serif',
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.4)',
-  },
-};
