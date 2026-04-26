@@ -14,7 +14,6 @@ import {
   DollarSign,
   ClipboardList,
   BarChart3,
-  Settings,
 } from 'lucide-react';
 import { canManageFinances, canManageClasses, canManageSubjects, canRecordAttendance } from '@/lib/permissions';
 import { useState } from 'react';
@@ -33,7 +32,6 @@ export function DashboardSidebar() {
   const baseMenuItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, show: true },
     { href: '/dashboard/students', label: 'Students', icon: Users, show: true },
-    { href: '/dashboard/settings', label: 'Settings', icon: Settings, show: true },
   ];
 
   const roleMenuItems = [
@@ -227,6 +225,13 @@ export function DashboardSidebar() {
           border-radius: 8px;
           margin-bottom: 8px;
           background: rgba(255,255,255,0.05);
+          cursor: pointer;
+          text-decoration: none;
+          transition: background 0.15s, transform 0.15s;
+        }
+        .sb-user:hover {
+          background: rgba(255,255,255,0.12);
+          transform: translateY(-1px);
         }
 
         .sb-avatar {
@@ -358,13 +363,13 @@ export function DashboardSidebar() {
 
           {/* Footer */}
           <div className="sb-footer">
-            <div className="sb-user">
+            <Link href="/dashboard/settings" className="sb-user" onClick={() => setIsOpen(false)}>
               <div className="sb-avatar">{initials}</div>
               <div>
                 <div className="sb-user-name">{user?.firstName} {user?.lastName}</div>
-                <div className="sb-user-role">{roleLabel}</div>
+                <div className="sb-user-role">{roleLabel} • Profile</div>
               </div>
-            </div>
+            </Link>
 
             <button className="sb-logout" onClick={handleLogout}>
               <LogOut className="sb-logout-icon" size={16} />

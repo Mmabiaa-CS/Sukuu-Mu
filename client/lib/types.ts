@@ -83,6 +83,8 @@ export interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  updateProfile: (updates: Partial<Pick<User, 'firstName' | 'lastName' | 'phone' | 'address'>>) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 // Dashboard stats
