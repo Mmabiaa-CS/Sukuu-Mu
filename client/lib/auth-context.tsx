@@ -53,11 +53,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('school_user');
   }, []);
 
+  const updateProfile = useCallback(async (updates: Partial<Pick<User, 'firstName' | 'lastName' | 'phone' | 'address'>>) => {
+    setUser((prevUser) => {
+      if (!prevUser) {
+        throw new Error('No active user session');
+      }
+      const updatedUser = { ...prevUser, ...updates };
+      localStorage.setItem('school_user', JSON.stringify(updatedUser));
+      return updatedUser;
+    });
+  }, []);
+
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    if (!user) {
+      throw new Error('No active user session');
+    }
+
+    const matchingMockUser = mockUsers.find((u) => u.email === user.email);
+    if (!matchingMockUser || matchingMockUser.password !== currentPassword) {
+      throw new Error('Current password is incorrect');
+    }
+
+    if (newPassword.length < 6) {
+      throw new Error('New password must be at least 6 characters');
+    }
+  }, [user]);
+
   const value: AuthContextType = {
     user,
     isLoading,
     login,
-    logout
+    logout,
+    updateProfile,
+    changePassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
