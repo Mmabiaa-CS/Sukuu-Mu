@@ -483,7 +483,7 @@ export default function LoginPage() {
 
           <div className="brand-mark">
             <Image 
-              src="/logo.png" 
+              src="/logo.png?v=2" 
               alt="Sukuu Mu Logo"
               width={180}
               height={86}

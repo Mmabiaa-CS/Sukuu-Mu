@@ -324,7 +324,7 @@ export function DashboardSidebar() {
           <div className="sb-logo">
             <div className="sb-logo-icon">
             <Image 
-              src="/logo.png" 
+              src="/logo.png?v=2" 
               alt="Sukuu Mu Logo"
               width={130}
               height={62}
