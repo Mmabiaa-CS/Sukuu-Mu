@@ -23,19 +23,6 @@ async function ensureDeterministicManifest(nextDir) {
   }
 }
 
-async function mirrorNextToParentWhenOnVercel(nextDir) {
-  if (!process.env.VERCEL) {
-    return;
-  }
-
-  const parentNextDir = path.resolve(process.cwd(), '..', '.next');
-  await fs.mkdir(parentNextDir, { recursive: true });
-
-  // Defensive compatibility for nested project roots on Vercel.
-  await fs.cp(nextDir, parentNextDir, { recursive: true, force: true });
-  console.log(`Mirrored .next output to ${parentNextDir}`);
-}
-
 async function main() {
   const nextDir = path.resolve(process.cwd(), '.next');
   const hasNextDir = await exists(nextDir);
@@ -46,7 +33,6 @@ async function main() {
   }
 
   await ensureDeterministicManifest(nextDir);
-  await mirrorNextToParentWhenOnVercel(nextDir);
 }
 
 main().catch((error) => {
