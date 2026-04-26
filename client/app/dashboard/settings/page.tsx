@@ -3,7 +3,11 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { useAuth } from '@/lib/auth-context';
-import { Moon, Sun, Download, Bell, MonitorSmartphone, Sparkles, UserRound, LockKeyhole, Mail, Phone, MapPin } from 'lucide-react';
+import {
+  Moon, Sun, Download, Bell, MonitorSmartphone, Sparkles,
+  UserRound, LockKeyhole, Mail, Phone, MapPin, ShieldCheck,
+  Palette, Sliders, ChevronRight,
+} from 'lucide-react';
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -48,9 +52,7 @@ export default function SettingsPage() {
     confirmPassword: '',
   });
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -83,12 +85,10 @@ export default function SettingsPage() {
       setInstallPrompt(event as BeforeInstallPromptEvent);
       setInstallStatus('Ready to install');
     };
-
     const onInstalled = () => {
       setInstallPrompt(null);
       setInstallStatus('Installed');
     };
-
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
     window.addEventListener('appinstalled', onInstalled);
     return () => {
@@ -105,8 +105,7 @@ export default function SettingsPage() {
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(preferences));
       setSaveMessage('Preferences saved');
-    } catch (error) {
-      console.error('Could not save preferences:', error);
+    } catch {
       setSaveMessage('Failed to save preferences');
     } finally {
       setTimeout(() => setSaveMessage(null), 1800);
@@ -118,8 +117,7 @@ export default function SettingsPage() {
     try {
       await updateProfile(profileForm);
       setProfileMessage('Profile details updated');
-    } catch (error) {
-      console.error('Failed to update profile:', error);
+    } catch {
       setProfileMessage('Could not update profile details');
     } finally {
       setTimeout(() => setProfileMessage(null), 1800);
@@ -130,18 +128,15 @@ export default function SettingsPage() {
     event.preventDefault();
     setPasswordError(null);
     setPasswordMessage(null);
-
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       setPasswordError('New password and confirmation do not match');
       return;
     }
-
     try {
       await changePassword(passwordForm.currentPassword, passwordForm.newPassword);
       setPasswordMessage('Password changed successfully');
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error) {
-      console.error('Failed to change password:', error);
       setPasswordError(error instanceof Error ? error.message : 'Could not change password');
     }
   };
@@ -153,8 +148,7 @@ export default function SettingsPage() {
       const choice = await installPrompt.userChoice;
       setInstallStatus(choice.outcome === 'accepted' ? 'Install accepted' : 'Install cancelled');
       setInstallPrompt(null);
-    } catch (error) {
-      console.error('PWA install failed:', error);
+    } catch {
       setInstallStatus('Install failed');
     }
   };
@@ -164,7 +158,8 @@ export default function SettingsPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap');
 
-        .set-root {
+        /* ── ROOT ── */
+        .sp-root {
           font-family: 'DM Sans', sans-serif;
           color: #0a0a0a;
           background: #f9f9f8;
@@ -172,201 +167,438 @@ export default function SettingsPage() {
           padding: 44px 48px;
           max-width: 1200px;
           margin: 0 auto;
-          animation: set-in 0.4s ease both;
+          animation: sp-in 0.4s ease both;
         }
-        @keyframes set-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes sp-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
-        .set-header { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:30px; padding-bottom:24px; border-bottom:1px solid #e8e8e6; }
-        .set-eyebrow { font-size:10px; font-weight:500; letter-spacing:.18em; text-transform:uppercase; color:#aaa; margin-bottom:8px; }
-        .set-title { font-family:'Playfair Display',serif; font-size:36px; font-weight:700; line-height:1.1; margin-bottom:6px; }
-        .set-sub { font-size:13px; font-weight:300; color:#8f8f8f; }
+        /* ── HEADER ── */
+        .sp-header {
+          display: flex; align-items: flex-end; justify-content: space-between;
+          margin-bottom: 36px; padding-bottom: 28px; border-bottom: 1px solid #e8e8e6;
+        }
+        .sp-eyebrow { font-size: 10px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: #aaa; margin-bottom: 8px; }
+        .sp-title { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 700; color: #0a0a0a; line-height: 1.1; margin-bottom: 6px; }
+        .sp-sub { font-size: 13px; font-weight: 300; color: #aaa; }
 
-        .set-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:14px; }
-        .set-card { background:#fff; border:1px solid #e8e8e6; border-radius:12px; padding:22px 24px; box-shadow: 0 1px 2px rgba(0,0,0,.02); }
-        .set-card.wide { grid-column: span 2; }
-        .set-card-title { font-size:10px; font-weight:500; letter-spacing:.16em; text-transform:uppercase; color:#aaa; margin-bottom:16px; }
-        .set-row { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:12px 0; }
-        .set-label { font-size:13px; color:#222; }
-        .set-help { font-size:11px; color:#999; margin-top:2px; }
+        /* ── STAT-STYLE SUMMARY CARDS (top row) ── */
+        .sp-stats {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 14px;
+          margin-bottom: 28px;
+          animation: sp-in 0.4s 0.05s ease both;
+        }
+        .sp-stat {
+          background: #fff; border: 1px solid #e8e8e6; border-radius: 10px;
+          padding: 22px 24px; position: relative; overflow: hidden;
+          transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+          cursor: default;
+        }
+        .sp-stat::before {
+          content:''; position:absolute; top:0; left:0; right:0; height:2px;
+          background:#0a0a0a; transform:scaleX(0); transform-origin:left;
+          transition:transform 0.3s ease;
+        }
+        .sp-stat:hover { border-color:#c8c8c6; transform:translateY(-2px); box-shadow:0 4px 20px rgba(0,0,0,.07); }
+        .sp-stat:hover::before { transform:scaleX(1); }
+        .sp-stat-icon { width:32px; height:32px; border-radius:7px; background:#f4f4f3; display:flex; align-items:center; justify-content:center; margin-bottom:14px; }
+        .sp-stat-label { font-size:10px; font-weight:500; letter-spacing:0.14em; text-transform:uppercase; color:#bbb; margin-bottom:6px; }
+        .sp-stat-value { font-family:'Playfair Display',serif; font-size:26px; font-weight:700; color:#0a0a0a; line-height:1; margin-bottom:4px; }
+        .sp-stat-sub { font-size:11px; font-weight:300; color:#bbb; }
 
-        .set-profile-head { display:flex; align-items:center; gap:16px; margin-bottom:14px; }
-        .set-avatar { width:72px; height:72px; border-radius:50%; background:linear-gradient(145deg,#0a0a0a,#3a3a3a); color:#fff; font-size:24px; font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(0,0,0,.22); animation:set-pulse 2.5s ease-in-out infinite; }
-        @keyframes set-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
-        .set-profile-name { font-size:20px; font-weight:700; color:#111; }
-        .set-profile-role { font-size:12px; color:#777; text-transform:capitalize; }
-        .set-card-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-        .set-field { display:flex; flex-direction:column; gap:6px; }
-        .set-field label { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#888; }
-        .set-input { height:42px; border:1px solid #e2e2e2; border-radius:10px; padding:0 12px; font-size:13px; background:#fff; }
-        .set-input:focus { outline:none; border-color:#0a0a0a; box-shadow:0 0 0 3px rgba(10,10,10,.08); }
+        /* ── MAIN GRID ── */
+        .sp-grid {
+          display: grid;
+          grid-template-columns: repeat(12, 1fr);
+          gap: 14px;
+        }
 
-        .set-theme-group { display:flex; gap:8px; }
-        .set-btn { border:1px solid #ddd; background:#fff; color:#222; border-radius:8px; padding:8px 12px; font-size:12px; display:flex; align-items:center; gap:6px; cursor:pointer; }
-        .set-btn.active { background:#0a0a0a; color:#fff; border-color:#0a0a0a; }
-        .set-btn.primary { background:#0a0a0a; color:#fff; border-color:#0a0a0a; }
-        .set-btn:disabled { opacity:.45; cursor:not-allowed; }
-        .set-status { font-size:11px; color:#777; }
+        /* ── SHARED CARD ── */
+        .sp-card {
+          background: #fff; border: 1px solid #e8e8e6; border-radius: 10px;
+          overflow: hidden;
+          animation: sp-in 0.4s 0.1s ease both;
+        }
+        .sp-card-header {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 18px 24px; border-bottom: 1px solid #f0f0ee;
+        }
+        .sp-card-title { font-size:10px; font-weight:500; letter-spacing:0.16em; text-transform:uppercase; color:#bbb; }
 
-        .set-toggle { width:44px; height:24px; border-radius:999px; border:none; cursor:pointer; display:inline-flex; align-items:center; padding:2px; transition:.2s; }
-        .set-toggle.off { background:#d4d4d4; }
-        .set-toggle.on { background:#0a0a0a; }
-        .set-toggle-dot { width:20px; height:20px; background:#fff; border-radius:999px; transition:.2s; }
-        .set-toggle.on .set-toggle-dot { transform: translateX(20px); }
+        /* column spans */
+        .sp-col-8  { grid-column: span 8; }
+        .sp-col-4  { grid-column: span 4; }
+        .sp-col-6  { grid-column: span 6; }
+        .sp-col-12 { grid-column: span 12; }
 
-        .set-actions { margin-top:18px; display:flex; align-items:center; gap:10px; }
-        .set-save { padding:10px 16px; border:none; border-radius:8px; background:#0a0a0a; color:#fff; font-size:12px; cursor:pointer; }
-        .set-error { margin-top:8px; font-size:12px; color:#b52b2b; }
-        .set-saved { font-size:12px; color:#2d7a4f; }
+        /* ── PROFILE CARD ── */
+        .sp-profile-head {
+          display: flex; align-items: center; gap: 16px;
+          padding: 22px 24px 18px;
+          border-bottom: 1px solid #f0f0ee;
+        }
+        .sp-avatar {
+          width: 52px; height: 52px; border-radius: 50%;
+          background: linear-gradient(145deg,#0a0a0a,#3a3a3a); color: #fff;
+          font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0; box-shadow: 0 6px 18px rgba(0,0,0,.20);
+          animation: sp-pulse 2.5s ease-in-out infinite;
+        }
+        @keyframes sp-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
+        .sp-profile-name { font-size: 16px; font-weight: 700; color: #111; line-height:1.2; }
+        .sp-profile-role { font-size: 11px; color: #999; text-transform: capitalize; margin-top: 2px; }
 
+        .sp-form-body { padding: 20px 24px; }
+        .sp-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+        /* ── FIELDS ── */
+        .sp-field { display: flex; flex-direction: column; gap: 6px; }
+        .sp-field label {
+          display: flex; align-items: center; gap: 5px;
+          font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #aaa; font-weight: 500;
+        }
+        .sp-input {
+          height: 42px; border: 1px solid #e4e4e2; border-radius: 8px;
+          padding: 0 13px; font-size: 13px; font-family: 'DM Sans', sans-serif;
+          background: #fff; color: #0a0a0a;
+          transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .sp-input:focus { outline: none; border-color: #0a0a0a; box-shadow: 0 0 0 3px rgba(10,10,10,0.06); }
+        .sp-input:disabled { background: #fafafa; color: #bbb; cursor: not-allowed; }
+
+        /* ── CARD FOOTER ACTIONS ── */
+        .sp-card-footer {
+          display: flex; align-items: center; gap: 10px;
+          padding: 16px 24px; border-top: 1px solid #f0f0ee; background: #fafafa;
+        }
+        .sp-btn-primary {
+          padding: 9px 18px; background: #0a0a0a; border: none; border-radius: 7px;
+          font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; color: #fff;
+          cursor: pointer; transition: background 0.15s, transform 0.15s;
+        }
+        .sp-btn-primary:hover { background: #222; transform: translateY(-1px); }
+        .sp-saved { font-size: 12px; color: #2d7a4f; }
+        .sp-error { font-size: 12px; color: #b52b2b; }
+
+        /* ── ROW ITEMS (toggles, theme, install) ── */
+        .sp-rows { padding: 4px 0; }
+        .sp-row {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 15px 24px; border-bottom: 1px solid #f8f8f7;
+          transition: background 0.12s;
+        }
+        .sp-row:last-child { border-bottom: none; }
+        .sp-row:hover { background: #fafafa; }
+        .sp-row-label { font-size: 13px; font-weight: 500; color: #0a0a0a; display:flex; align-items:center; gap:8px; }
+        .sp-row-help { font-size: 11px; font-weight: 300; color: #aaa; margin-top: 2px; }
+        .sp-row-icon { width:28px; height:28px; border-radius:6px; background:#f4f4f3; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+        /* ── TOGGLE ── */
+        .sp-toggle {
+          width: 44px; height: 24px; border-radius: 999px; border: none;
+          cursor: pointer; display: inline-flex; align-items: center; padding: 2px;
+          transition: background 0.2s; flex-shrink: 0;
+        }
+        .sp-toggle.off { background: #e0e0e0; }
+        .sp-toggle.on  { background: #0a0a0a; }
+        .sp-toggle-dot { width: 20px; height: 20px; background: #fff; border-radius: 999px; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+        .sp-toggle.on .sp-toggle-dot { transform: translateX(20px); }
+
+        /* ── THEME PILLS ── */
+        .sp-theme-group { display: flex; gap: 6px; }
+        .sp-theme-btn {
+          display: flex; align-items: center; gap: 6px;
+          padding: 8px 14px; border-radius: 20px; font-size: 12px; font-family: 'DM Sans', sans-serif;
+          border: 1px solid #e4e4e2; background: #fff; color: #888; cursor: pointer;
+          transition: all 0.15s;
+        }
+        .sp-theme-btn:hover { border-color: #c0c0be; color: #444; }
+        .sp-theme-btn.active { background: #0a0a0a; border-color: #0a0a0a; color: #fff; font-weight: 500; }
+
+        /* ── INSTALL BTN ── */
+        .sp-install-btn {
+          display: flex; align-items: center; gap: 6px;
+          padding: 8px 16px; background: #0a0a0a; border: none; border-radius: 7px;
+          font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; color: #fff;
+          cursor: pointer; transition: background 0.15s, transform 0.15s;
+        }
+        .sp-install-btn:hover:not(:disabled) { background: #222; transform: translateY(-1px); }
+        .sp-install-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* ── STATUS PILL ── */
+        .sp-status-pill {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 400;
+        }
+        .sp-status-dot { width: 5px; height: 5px; border-radius: 50%; }
+        .sp-status-pill.installed  { background: #f0faf4; color: #2d7a4f; }
+        .sp-status-pill.installed .sp-status-dot { background: #2d7a4f; }
+        .sp-status-pill.ready      { background: #fef9ec; color: #a06b00; }
+        .sp-status-pill.ready .sp-status-dot { background: #d4900a; }
+        .sp-status-pill.unavailable{ background: #f4f4f3; color: #aaa; }
+        .sp-status-pill.unavailable .sp-status-dot { background: #ccc; }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 900px) {
+          .sp-col-8, .sp-col-4, .sp-col-6 { grid-column: span 12; }
+        }
         @media (max-width: 700px) {
-          .set-root { padding:24px 18px; }
-          .set-header { flex-direction:column; align-items:flex-start; gap:12px; }
-          .set-card.wide { grid-column:auto; }
-          .set-card-grid { grid-template-columns:1fr; }
+          .sp-root { padding: 24px 18px; }
+          .sp-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+          .sp-form-grid { grid-template-columns: 1fr; }
+          .sp-stats { grid-template-columns: 1fr 1fr; }
         }
       `}</style>
 
-      <div className="set-root">
-        <div className="set-header">
+      <div className="sp-root">
+
+        {/* ── HEADER ── */}
+        <div className="sp-header">
           <div>
-            <div className="set-eyebrow">Personalization</div>
-            <h1 className="set-title">Settings</h1>
-            <p className="set-sub">Manage your profile, account security, app behavior, and installation.</p>
+            <div className="sp-eyebrow">Personalization</div>
+            <h1 className="sp-title">Settings</h1>
+            <p className="sp-sub">Manage your profile, account security, app behaviour, and installation.</p>
           </div>
         </div>
 
-        <div className="set-grid">
-          <section className="set-card wide">
-            <h2 className="set-card-title">Profile Details</h2>
-            <div className="set-profile-head">
-              <div className="set-avatar" aria-label="Profile avatar">{initials || 'U'}</div>
+        {/* ── SUMMARY STAT CARDS ── */}
+        <div className="sp-stats">
+          <div className="sp-stat">
+            <div className="sp-stat-icon"><UserRound size={15} color="#0a0a0a" /></div>
+            <div className="sp-stat-label">Account</div>
+            <div className="sp-stat-value" style={{ fontSize: 18, paddingTop: 2 }}>{user?.firstName} {user?.lastName}</div>
+            <div className="sp-stat-sub" style={{ textTransform: 'capitalize' }}>{user?.role ?? 'User'} role</div>
+          </div>
+          <div className="sp-stat">
+            <div className="sp-stat-icon"><Mail size={15} color="#0a0a0a" /></div>
+            <div className="sp-stat-label">Email</div>
+            <div className="sp-stat-value" style={{ fontSize: 13, paddingTop: 4, fontFamily: 'DM Sans, sans-serif', fontWeight: 400 }}>{user?.email ?? '—'}</div>
+            <div className="sp-stat-sub">Primary address</div>
+          </div>
+          <div className="sp-stat">
+            <div className="sp-stat-icon"><Palette size={15} color="#0a0a0a" /></div>
+            <div className="sp-stat-label">Theme</div>
+            <div className="sp-stat-value" style={{ fontSize: 18, paddingTop: 2, textTransform: 'capitalize' }}>{mounted ? theme : 'Light'}</div>
+            <div className="sp-stat-sub">Interface mode</div>
+          </div>
+          <div className="sp-stat">
+            <div className="sp-stat-icon"><Download size={15} color="#0a0a0a" /></div>
+            <div className="sp-stat-label">PWA Status</div>
+            <div className="sp-stat-value" style={{ fontSize: 15, paddingTop: 4, fontFamily: 'DM Sans, sans-serif', fontWeight: 500 }}>{installStatus}</div>
+            <div className="sp-stat-sub">{canInstall ? 'Tap to install' : 'Home screen app'}</div>
+          </div>
+        </div>
+
+        {/* ── MAIN GRID ── */}
+        <div className="sp-grid">
+
+          {/* PROFILE CARD — wide */}
+          <section className="sp-card sp-col-8">
+            <div className="sp-card-header">
+              <span className="sp-card-title">Profile Details</span>
+            </div>
+            <div className="sp-profile-head">
+              <div className="sp-avatar" aria-label="Profile avatar">{initials || 'U'}</div>
               <div>
-                <div className="set-profile-name">{user?.firstName} {user?.lastName}</div>
-                <div className="set-profile-role">{user?.role ?? 'User'} account</div>
+                <div className="sp-profile-name">{user?.firstName} {user?.lastName}</div>
+                <div className="sp-profile-role">{user?.role ?? 'User'} account</div>
               </div>
             </div>
             <form onSubmit={handleProfileSave}>
-              <div className="set-card-grid">
-                <div className="set-field">
-                  <label><UserRound size={12} style={{ display: 'inline', marginRight: 4 }} />First Name</label>
-                  <input className="set-input" value={profileForm.firstName} onChange={(e) => setProfileForm((p) => ({ ...p, firstName: e.target.value }))} />
-                </div>
-                <div className="set-field">
-                  <label><UserRound size={12} style={{ display: 'inline', marginRight: 4 }} />Last Name</label>
-                  <input className="set-input" value={profileForm.lastName} onChange={(e) => setProfileForm((p) => ({ ...p, lastName: e.target.value }))} />
-                </div>
-                <div className="set-field">
-                  <label><Mail size={12} style={{ display: 'inline', marginRight: 4 }} />Email</label>
-                  <input className="set-input" value={user?.email ?? ''} disabled />
-                </div>
-                <div className="set-field">
-                  <label><Phone size={12} style={{ display: 'inline', marginRight: 4 }} />Phone</label>
-                  <input className="set-input" value={profileForm.phone} onChange={(e) => setProfileForm((p) => ({ ...p, phone: e.target.value }))} />
-                </div>
-                <div className="set-field" style={{ gridColumn: 'span 2' }}>
-                  <label><MapPin size={12} style={{ display: 'inline', marginRight: 4 }} />Address</label>
-                  <input className="set-input" value={profileForm.address} onChange={(e) => setProfileForm((p) => ({ ...p, address: e.target.value }))} />
+              <div className="sp-form-body">
+                <div className="sp-form-grid">
+                  <div className="sp-field">
+                    <label><UserRound size={11} />First Name</label>
+                    <input className="sp-input" value={profileForm.firstName} onChange={(e) => setProfileForm((p) => ({ ...p, firstName: e.target.value }))} />
+                  </div>
+                  <div className="sp-field">
+                    <label><UserRound size={11} />Last Name</label>
+                    <input className="sp-input" value={profileForm.lastName} onChange={(e) => setProfileForm((p) => ({ ...p, lastName: e.target.value }))} />
+                  </div>
+                  <div className="sp-field">
+                    <label><Mail size={11} />Email</label>
+                    <input className="sp-input" value={user?.email ?? ''} disabled />
+                  </div>
+                  <div className="sp-field">
+                    <label><Phone size={11} />Phone</label>
+                    <input className="sp-input" value={profileForm.phone} onChange={(e) => setProfileForm((p) => ({ ...p, phone: e.target.value }))} />
+                  </div>
+                  <div className="sp-field" style={{ gridColumn: 'span 2' }}>
+                    <label><MapPin size={11} />Address</label>
+                    <input className="sp-input" value={profileForm.address} onChange={(e) => setProfileForm((p) => ({ ...p, address: e.target.value }))} />
+                  </div>
                 </div>
               </div>
-              <div className="set-actions">
-                <button type="submit" className="set-save">Save Profile</button>
-                {profileMessage && <span className="set-saved">{profileMessage}</span>}
+              <div className="sp-card-footer">
+                <button type="submit" className="sp-btn-primary">Save Profile</button>
+                {profileMessage && <span className="sp-saved">{profileMessage}</span>}
               </div>
             </form>
           </section>
 
-          <section className="set-card">
-            <h2 className="set-card-title">Security</h2>
+          {/* SECURITY CARD — narrow */}
+          <section className="sp-card sp-col-4">
+            <div className="sp-card-header">
+              <span className="sp-card-title">Security</span>
+              <ShieldCheck size={14} color="#bbb" />
+            </div>
             <form onSubmit={handlePasswordSave}>
-              <div className="set-field">
-                <label><LockKeyhole size={12} style={{ display: 'inline', marginRight: 4 }} />Current Password</label>
-                <input className="set-input" type="password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm((p) => ({ ...p, currentPassword: e.target.value }))} required />
+              <div className="sp-form-body">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div className="sp-field">
+                    <label><LockKeyhole size={11} />Current Password</label>
+                    <input className="sp-input" type="password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm((p) => ({ ...p, currentPassword: e.target.value }))} required />
+                  </div>
+                  <div className="sp-field">
+                    <label><LockKeyhole size={11} />New Password</label>
+                    <input className="sp-input" type="password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm((p) => ({ ...p, newPassword: e.target.value }))} required />
+                  </div>
+                  <div className="sp-field">
+                    <label><LockKeyhole size={11} />Confirm Password</label>
+                    <input className="sp-input" type="password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm((p) => ({ ...p, confirmPassword: e.target.value }))} required />
+                  </div>
+                  {passwordError && <p className="sp-error">{passwordError}</p>}
+                </div>
               </div>
-              <div className="set-field" style={{ marginTop: '10px' }}>
-                <label>New Password</label>
-                <input className="set-input" type="password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm((p) => ({ ...p, newPassword: e.target.value }))} required />
-              </div>
-              <div className="set-field" style={{ marginTop: '10px' }}>
-                <label>Confirm Password</label>
-                <input className="set-input" type="password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm((p) => ({ ...p, confirmPassword: e.target.value }))} required />
-              </div>
-              {passwordError && <p className="set-error">{passwordError}</p>}
-              <div className="set-actions">
-                <button type="submit" className="set-save">Change Password</button>
-                {passwordMessage && <span className="set-saved">{passwordMessage}</span>}
+              <div className="sp-card-footer">
+                <button type="submit" className="sp-btn-primary">Change Password</button>
+                {passwordMessage && <span className="sp-saved">{passwordMessage}</span>}
               </div>
             </form>
           </section>
 
-          <section className="set-card">
-            <h2 className="set-card-title">Appearance</h2>
-            <div className="set-row">
-              <div>
-                <div className="set-label">Theme mode</div>
-                <div className="set-help">Choose your preferred interface theme.</div>
+          {/* APPEARANCE CARD */}
+          <section className="sp-card sp-col-6">
+            <div className="sp-card-header">
+              <span className="sp-card-title">Appearance</span>
+              <Palette size={14} color="#bbb" />
+            </div>
+            <div className="sp-rows">
+              <div className="sp-row">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="sp-row-icon"><Sun size={13} color="#0a0a0a" /></div>
+                  <div>
+                    <div className="sp-row-label">Theme mode</div>
+                    <div className="sp-row-help">Choose your preferred interface theme.</div>
+                  </div>
+                </div>
+                <div className="sp-theme-group">
+                  <button className={`sp-theme-btn ${activeTheme === 'light' ? 'active' : ''}`} onClick={() => setTheme('light')} type="button">
+                    <Sun size={13} /> Light
+                  </button>
+                  <button className={`sp-theme-btn ${activeTheme === 'dark' ? 'active' : ''}`} onClick={() => setTheme('dark')} type="button">
+                    <Moon size={13} /> Dark
+                  </button>
+                </div>
               </div>
-              <div className="set-theme-group">
-                <button className={`set-btn ${activeTheme === 'light' ? 'active' : ''}`} onClick={() => setTheme('light')} type="button">
-                  <Sun size={14} /> Light
+            </div>
+          </section>
+
+          {/* INSTALL CARD */}
+          <section className="sp-card sp-col-6">
+            <div className="sp-card-header">
+              <span className="sp-card-title">Install App (PWA)</span>
+              <Download size={14} color="#bbb" />
+            </div>
+            <div className="sp-rows">
+              <div className="sp-row">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="sp-row-icon"><Download size={13} color="#0a0a0a" /></div>
+                  <div>
+                    <div className="sp-row-label">Install Sukuu Mu</div>
+                    <div className="sp-row-help">Launch from home screen like a native app.</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="sp-install-btn"
+                  onClick={handleInstall}
+                  disabled={!canInstall}
+                  aria-disabled={!canInstall}
+                >
+                  <Download size={13} />
+                  {canInstall ? 'Install' : 'Unavailable'}
                 </button>
-                <button className={`set-btn ${activeTheme === 'dark' ? 'active' : ''}`} onClick={() => setTheme('dark')} type="button">
-                  <Moon size={14} /> Dark
+              </div>
+              <div className="sp-row">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="sp-row-icon"><ChevronRight size={13} color="#aaa" /></div>
+                  <div>
+                    <div className="sp-row-label" style={{ color: '#888', fontWeight: 400 }}>Installation status</div>
+                  </div>
+                </div>
+                <span className={`sp-status-pill ${installStatus === 'Installed' ? 'installed' : canInstall ? 'ready' : 'unavailable'}`}>
+                  <span className="sp-status-dot" />
+                  {installStatus}
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* APP PREFERENCES CARD — full width */}
+          <section className="sp-card sp-col-12">
+            <div className="sp-card-header">
+              <span className="sp-card-title">App Preferences</span>
+              <Sliders size={14} color="#bbb" />
+            </div>
+            <div className="sp-rows">
+              <div className="sp-row">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="sp-row-icon"><Bell size={13} color="#0a0a0a" /></div>
+                  <div>
+                    <div className="sp-row-label">Email notifications</div>
+                    <div className="sp-row-help">Receive account and school updates via email.</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className={`sp-toggle ${preferences.emailNotifications ? 'on' : 'off'}`}
+                  onClick={() => setPreferences((p) => ({ ...p, emailNotifications: !p.emailNotifications }))}
+                >
+                  <span className="sp-toggle-dot" />
+                </button>
+              </div>
+
+              <div className="sp-row">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="sp-row-icon"><Sparkles size={13} color="#0a0a0a" /></div>
+                  <div>
+                    <div className="sp-row-label">Reduced motion</div>
+                    <div className="sp-row-help">Lower visual motion for comfort and focus.</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className={`sp-toggle ${preferences.reducedMotion ? 'on' : 'off'}`}
+                  onClick={() => setPreferences((p) => ({ ...p, reducedMotion: !p.reducedMotion }))}
+                >
+                  <span className="sp-toggle-dot" />
+                </button>
+              </div>
+
+              <div className="sp-row">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="sp-row-icon"><MonitorSmartphone size={13} color="#0a0a0a" /></div>
+                  <div>
+                    <div className="sp-row-label">Compact tables</div>
+                    <div className="sp-row-help">Use denser rows to fit more data on screen.</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className={`sp-toggle ${preferences.compactTables ? 'on' : 'off'}`}
+                  onClick={() => setPreferences((p) => ({ ...p, compactTables: !p.compactTables }))}
+                >
+                  <span className="sp-toggle-dot" />
                 </button>
               </div>
             </div>
-          </section>
-
-          <section className="set-card">
-            <h2 className="set-card-title">Install App (PWA)</h2>
-            <div className="set-row">
-              <div>
-                <div className="set-label">Install Sukuu Mu</div>
-                <div className="set-help">Launch from home screen like a native app.</div>
-              </div>
-              <button type="button" className="set-btn primary" onClick={handleInstall} disabled={!canInstall} aria-disabled={!canInstall}>
-                <Download size={14} /> {canInstall ? 'Install' : 'Unavailable'}
-              </button>
-            </div>
-            <p className="set-status">Status: {installStatus}</p>
-          </section>
-
-          <section className="set-card wide">
-            <h2 className="set-card-title">App Preferences</h2>
-            <div className="set-row">
-              <div>
-                <div className="set-label"><Bell size={14} style={{ display: 'inline', marginRight: 6 }} />Email notifications</div>
-                <div className="set-help">Receive account and school updates via email.</div>
-              </div>
-              <button type="button" className={`set-toggle ${preferences.emailNotifications ? 'on' : 'off'}`} onClick={() => setPreferences((prev) => ({ ...prev, emailNotifications: !prev.emailNotifications }))}>
-                <span className="set-toggle-dot" />
-              </button>
-            </div>
-
-            <div className="set-row">
-              <div>
-                <div className="set-label"><Sparkles size={14} style={{ display: 'inline', marginRight: 6 }} />Reduced motion</div>
-                <div className="set-help">Lower visual motion for comfort and focus.</div>
-              </div>
-              <button type="button" className={`set-toggle ${preferences.reducedMotion ? 'on' : 'off'}`} onClick={() => setPreferences((prev) => ({ ...prev, reducedMotion: !prev.reducedMotion }))}>
-                <span className="set-toggle-dot" />
-              </button>
-            </div>
-
-            <div className="set-row">
-              <div>
-                <div className="set-label"><MonitorSmartphone size={14} style={{ display: 'inline', marginRight: 6 }} />Compact tables</div>
-                <div className="set-help">Use denser rows to fit more data on screen.</div>
-              </div>
-              <button type="button" className={`set-toggle ${preferences.compactTables ? 'on' : 'off'}`} onClick={() => setPreferences((prev) => ({ ...prev, compactTables: !prev.compactTables }))}>
-                <span className="set-toggle-dot" />
-              </button>
-            </div>
-
-            <div className="set-actions">
-              <button type="button" className="set-save" onClick={savePreferences}>Save Preferences</button>
-              {saveMessage && <span className="set-saved">{saveMessage}</span>}
+            <div className="sp-card-footer">
+              <button type="button" className="sp-btn-primary" onClick={savePreferences}>Save Preferences</button>
+              {saveMessage && <span className="sp-saved">{saveMessage}</span>}
             </div>
           </section>
+
         </div>
       </div>
     </>
