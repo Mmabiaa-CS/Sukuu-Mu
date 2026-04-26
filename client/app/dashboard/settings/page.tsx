@@ -35,6 +35,7 @@ export default function SettingsPage() {
   const [mounted, setMounted] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installStatus, setInstallStatus] = useState<string>('Not installed');
+  const [installHint, setInstallHint] = useState<string>('Checking install availability...');
   const [preferences, setPreferences] = useState<AppPreferences>(defaultPreferences);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
@@ -84,11 +85,29 @@ export default function SettingsPage() {
       event.preventDefault();
       setInstallPrompt(event as BeforeInstallPromptEvent);
       setInstallStatus('Ready to install');
+      setInstallHint('Install is available in this browser');
     };
     const onInstalled = () => {
       setInstallPrompt(null);
       setInstallStatus('Installed');
+      setInstallHint('App is already installed');
     };
+
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (typeof (window.navigator as Navigator & { standalone?: boolean }).standalone === 'boolean' &&
+        !!(window.navigator as Navigator & { standalone?: boolean }).standalone);
+    const supportsInstallPrompt = 'onbeforeinstallprompt' in window;
+
+    if (isStandalone) {
+      setInstallStatus('Installed');
+      setInstallHint('App is already installed');
+    } else if (!supportsInstallPrompt) {
+      setInstallHint('Use Chrome or Edge to install this app');
+    } else {
+      setInstallHint('Visit over HTTPS and use the app to enable install');
+    }
+
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
     window.addEventListener('appinstalled', onInstalled);
     return () => {
@@ -147,9 +166,15 @@ export default function SettingsPage() {
       await installPrompt.prompt();
       const choice = await installPrompt.userChoice;
       setInstallStatus(choice.outcome === 'accepted' ? 'Install accepted' : 'Install cancelled');
+      setInstallHint(
+        choice.outcome === 'accepted'
+          ? 'Install was accepted. Waiting for app to finish installation.'
+          : 'Install was dismissed. You can try again later.'
+      );
       setInstallPrompt(null);
     } catch {
       setInstallStatus('Install failed');
+      setInstallHint('Install failed. Please try again in Chrome or Edge.');
     }
   };
 
@@ -506,7 +531,7 @@ export default function SettingsPage() {
                   <div className="sp-row-icon"><Download size={13} color="#0a0a0a" /></div>
                   <div>
                     <div className="sp-row-label">Install Sukuu Mu</div>
-                    <div className="sp-row-help">Launch from home screen like a native app.</div>
+                    <div className="sp-row-help">{canInstall ? 'Launch from home screen like a native app.' : installHint}</div>
                   </div>
                 </div>
                 <button
