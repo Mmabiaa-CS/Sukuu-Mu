@@ -481,15 +481,15 @@ export default function LoginPage() {
           <div className="panel-left-overlay" />
           <div className="panel-left-content">
 
-          <div className="brand-mark">
-            <Image 
-              src="/logo.png?v=2" 
-              alt="Sukuu Mu Logo"
-              width={180}
-              height={86}
-              className="brand-logo"
-            />
-          </div>
+            <div className="brand-mark">
+              <Image
+                src="/logo.png"
+                alt="Sukuu Mu Logo"
+                width={180}
+                height={86}
+                className="brand-logo"
+              />
+            </div>
 
             <div className="hero-text">
               <p className="hero-eyebrow">School Management Platform</p>

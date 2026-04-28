@@ -323,13 +323,13 @@ export function DashboardSidebar() {
           {/* Logo */}
           <div className="sb-logo">
             <div className="sb-logo-icon">
-            <Image 
-              src="/logo.png?v=2" 
-              alt="Sukuu Mu Logo"
-              width={130}
-              height={62}
-              className="brand-logo"
-            />
+              <Image
+                src="/logo.png"
+                alt="Sukuu Mu Logo"
+                width={130}
+                height={62}
+                className="brand-logo"
+              />
             </div>
           </div>
 
