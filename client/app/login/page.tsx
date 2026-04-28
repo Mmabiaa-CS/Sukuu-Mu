@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from "next/image";
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -92,12 +93,11 @@ export default function LoginPage() {
         .brand-mark {
           display: flex;
           align-items: center;
-          gap: 12px;
         }
 
         .brand-logo {
-          width: 36px;
-          height: 36px;
+          width: 180px;
+          height: auto;
           flex-shrink: 0;
         }
 
@@ -482,18 +482,13 @@ export default function LoginPage() {
           <div className="panel-left-content">
 
             <div className="brand-mark">
-              <svg className="brand-logo" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="17" y="11" width="2" height="17" rx="1" fill="white" opacity="0.9"/>
-                <path d="M17 13 C12 13 7 15 7 19 L7 28 C12 26 17 28 17 28 Z" fill="white" opacity="0.75"/>
-                <path d="M19 13 C24 13 29 15 29 19 L29 28 C24 26 19 28 19 28 Z" fill="white" opacity="0.55"/>
-                <path d="M11 11 A9 9 0 0 1 25 11" stroke="white" strokeWidth="1.8" strokeLinecap="round" opacity="0.9"/>
-                <line x1="18" y1="2" x2="18" y2="5.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" opacity="0.85"/>
-                <line x1="24" y1="3.8" x2="22.4" y2="6.6" stroke="white" strokeWidth="1.6" strokeLinecap="round" opacity="0.7"/>
-                <line x1="12" y1="3.8" x2="13.6" y2="6.6" stroke="white" strokeWidth="1.6" strokeLinecap="round" opacity="0.7"/>
-                <line x1="27.5" y1="8" x2="25.2" y2="9.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" opacity="0.5"/>
-                <line x1="8.5" y1="8" x2="10.8" y2="9.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" opacity="0.5"/>
-              </svg>
-              <span className="brand-name">Sukuu Mu</span>
+              <Image
+                src="/logo.png"
+                alt="Sukuu Mu Logo"
+                width={180}
+                height={86}
+                className="brand-logo"
+              />
             </div>
 
             <div className="hero-text">

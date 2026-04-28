@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sukuu-mu-v1';
+const CACHE_NAME = 'sukuu-mu-v2';
 const APP_SHELL = ['/', '/login', '/dashboard', '/manifest.webmanifest', '/icon.svg'];
 
 self.addEventListener('install', (event) => {
@@ -19,6 +19,25 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
+  const isSameOrigin = url.origin === self.location.origin;
+
+  if (!isSameOrigin) {
+    return;
+  }
+
+  // Never intercept Next.js build assets. Serving stale HTML here can break routing.
+  if (url.pathname.startsWith('/_next/')) {
+    return;
+  }
+
+  // Navigation requests should be network-first to avoid stale app shells.
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('/login'))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
@@ -33,7 +52,7 @@ self.addEventListener('fetch', (event) => {
             .catch(() => Promise.resolve());
           return networkResponse;
         })
-        .catch(() => caches.match('/login'));
+        .catch(() => Response.error());
     })
   );
 });
