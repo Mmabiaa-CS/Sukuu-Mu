@@ -500,24 +500,7 @@ export default function LoginPage() {
               <p className="hero-sub">
                 Manage students, staff, timetables, and finances — with clarity and control.
               </p>
-            </div>
-
-            <div className="panel-left-footer">
-              <div className="stat-item">
-                <span className="stat-number">500+</span>
-                <span className="stat-label">Schools</span>
-              </div>
-              <div className="stat-divider" />
-              <div className="stat-item">
-                <span className="stat-number">120k</span>
-                <span className="stat-label">Students</span>
-              </div>
-              <div className="stat-divider" />
-              <div className="stat-item">
-                <span className="stat-number">99.9%</span>
-                <span className="stat-label">Uptime</span>
-              </div>
-            </div>
+            </div><br /><br />
 
           </div>
         </div>
