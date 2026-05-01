@@ -13,6 +13,7 @@ This folder contains the **product** and **engineering** documentation for Sukuu
 - **UI system**: `docs/frontend/ui-and-design-system.md`
 - **Local development setup**: `docs/development/local-setup.md`
 - **Repository structure**: `docs/development/repo-structure.md`
+- **Backend RBAC, constraints & frontend alignment**: `docs/architecture/backend-rbac-and-integration.md`
 - **Release notes**:
   - `docs/releases/v1.0.0.md`
   - `docs/releases/v1.1.0.md`
