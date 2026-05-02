@@ -164,6 +164,7 @@ Use these before coding integration or new endpoints:
 
 ## Related docs
 
+- **`docs/architecture/production-roadmap.md`** — phased path to production and scale (startup-appropriate)  
 - `docs/frontend/auth-and-roles.md` — current mock auth and planned evolution  
 - `docs/frontend/state-and-data.md` — hooks and planned API layer  
 - `apps/server/README.md` — env vars and route overview  
