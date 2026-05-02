@@ -1,7 +1,7 @@
 'use strict';
 
 const express = require('express');
-const router = express.Router();
+const router  = express.Router();
 
 const feeController = require('./fee.controller');
 const { authenticate, authorize } = require('../../middleware/auth.middleware');
@@ -27,13 +27,30 @@ router.put('/structures/:id',
   feeController.updateFeeStructure
 );
 
-// ── Bulk assign structure to classes ───────────────────────────────────────
 router.post('/structures/:id/assign-classes',
   authorize('admin'),
   feeController.assignStructureToClasses
 );
 
-// ── Student fee ledger ─────────────────────────────────────────────────────
+// ── Reports ────────────────────────────────────────────────────────────────
+router.get('/reports/summary',
+  feeController.getFeeReport
+);
+
+router.get('/reports/outstanding',
+  feeController.getOutstandingReport
+);
+
+// ── Receipts ───────────────────────────────────────────────────────────────
+router.get('/receipts/:payment_id',
+  feeController.generateReceipt
+);
+
+router.get('/receipts/:payment_id/download',
+  feeController.downloadReceipt
+);
+
+// ── Student ledger ─────────────────────────────────────────────────────────
 router.get('/ledger/:student_id',
   feeController.getStudentFeeLedger
 );
