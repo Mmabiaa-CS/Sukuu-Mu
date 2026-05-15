@@ -157,6 +157,17 @@ Repositories should import **`pool`** from **`src/database/connection.js`** for 
 |--------|---------|-------------|
 | `start` | `node server.js` | Production-style run |
 | `dev` | `nodemon server.js` | Reload on file changes |
+| `migrate` | `pnpm run migrate` | Initialize database schema |
+
+---
+
+## API Documentation
+
+Interactive API documentation is available via Swagger UI:
+- **URL**: `http://localhost:3001/api-docs` (when server is running)
+- Provided details: Endpoints, request bodies, success/error models, and authentication.
+
+---
 
 ---
 
