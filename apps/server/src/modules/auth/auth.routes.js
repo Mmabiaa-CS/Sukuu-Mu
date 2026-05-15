@@ -51,8 +51,34 @@ router.post('/login', authController.login);
 router.post('/register', authController.register);
 
 // ── Protected ──────────────────────────────────────────────────────────────
+/**
+ * @openapi
+ * /auth/me:
+ *   get:
+ *     tags: [Auth]
+ *     summary: Get currently logged-in user profile
+ *     security: [{ bearerAuth: [] }]
+ */
 router.get('/me', authenticate, authController.getMe);
+
+/**
+ * @openapi
+ * /auth/change-password:
+ *   patch:
+ *     tags: [Auth]
+ *     summary: Change own password
+ *     security: [{ bearerAuth: [] }]
+ */
 router.patch('/change-password', authenticate, authController.changePassword);
+
+/**
+ * @openapi
+ * /auth/users:
+ *   get:
+ *     tags: [Auth]
+ *     summary: Get all registered system users
+ *     security: [{ bearerAuth: [] }]
+ */
 router.get('/users', authenticate, authorize('admin'), authController.getAllUsers);
 
 module.exports = router;
