@@ -12,8 +12,9 @@ router.use(authenticate);
 router.get('/search', studentController.searchStudents);
 
 // ── Student CRUD ───────────────────────────────────────────────────────────
-router.get('/',     studentController.getAllStudents);
-router.get('/:id',  studentController.getStudentById);
+router.get('/', studentController.getAllStudents);
+router.get('/code/:c', studentController.getStudentByCode);
+router.get('/:id', studentController.getStudentById);
 
 router.post('/',
   authorize('admin', 'teacher'),

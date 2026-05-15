@@ -20,6 +20,15 @@ const getStudentById = async (req, res, next) => {
   }
 };
 
+const getStudentByCode = async (req, res, next) => {
+  try {
+    const data = await studentService.getStudentByCode(req.params.c);
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 const searchStudents = async (req, res, next) => {
   try {
     const { q } = req.query;
@@ -77,6 +86,7 @@ const deleteStudent = async (req, res, next) => {
 module.exports = {
   getAllStudents,
   getStudentById,
+  getStudentByCode,
   searchStudents,
   createStudent,
   updateStudent,

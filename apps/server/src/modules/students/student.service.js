@@ -4,8 +4,8 @@ const studentRepository = require('./student.repository');
 
 // ── Get all students ───────────────────────────────────────────────────────
 const getAllStudents = async (query) => {
-  const page   = Math.max(parseInt(query.page)  || 1, 1);
-  const limit  = Math.min(parseInt(query.limit) || 10, 100);
+  const page = Math.max(parseInt(query.page) || 1, 1);
+  const limit = Math.min(parseInt(query.limit) || 10, 100);
   const offset = (page - 1) * limit;
   const search = query.search?.trim() || null;
 
@@ -34,7 +34,19 @@ const getStudentById = async (id) => {
     throw err;
   }
 
-  const parents = await studentRepository.findParentsByStudentId(id);
+  const parents = await studentRepository.findParentsByStudentId(student.id);
+  return { ...student, parents };
+};
+
+const getStudentByCode = async (code) => {
+  const student = await studentRepository.findByCode(code);
+  if (!student) {
+    const err = new Error(`Student with code ${code} not found`);
+    err.status = 404;
+    throw err;
+  }
+
+  const parents = await studentRepository.findParentsByStudentId(student.id);
   return { ...student, parents };
 };
 
@@ -56,7 +68,7 @@ const searchStudents = async (query) => {
 
 // ── Create student ─────────────────────────────────────────────────────────
 const createStudent = async (body) => {
-  const { first_name, last_name, email, parent_id, parent_name, relation, is_primary } = body;
+  const { first_name, last_name, email, enrollment_date, parent_id, parent_name, relation, is_primary } = body;
 
   if (!first_name || !last_name || !email) {
     const err = new Error('first_name, last_name and email are required');
@@ -72,8 +84,13 @@ const createStudent = async (body) => {
     throw err;
   }
 
+  // Generate student_code
+  const year = enrollment_date ? new Date(enrollment_date).getFullYear() : new Date().getFullYear();
+  const sequence = await studentRepository.getNextSequenceNumber(year);
+  const student_code = `SMS-${year}-${String(sequence).padStart(4, '0')}`;
+
   // Create the student
-  const student = await studentRepository.create(body);
+  const student = await studentRepository.create({ ...body, student_code });
 
   // If parent provided link them
   const parentIdentifier = parent_id || parent_name;
@@ -86,7 +103,7 @@ const createStudent = async (body) => {
     }
 
     await studentRepository.linkParent({
-      parent_id:  resolvedParent.id,
+      parent_id: resolvedParent.id,
       student_id: student.id,
       relation,
       is_primary,
@@ -133,9 +150,9 @@ const updateStudent = async (id, body) => {
     const existingLink = await studentRepository.findParentStudentLink(resolvedParent.id, id);
     if (!existingLink) {
       await studentRepository.linkParent({
-        parent_id:  resolvedParent.id,
+        parent_id: resolvedParent.id,
         student_id: id,
-        relation:   body.relation,
+        relation: body.relation,
         is_primary: body.is_primary,
       });
     }
@@ -160,6 +177,7 @@ const deleteStudent = async (id) => {
 module.exports = {
   getAllStudents,
   getStudentById,
+  getStudentByCode,
   searchStudents,
   createStudent,
   updateStudent,

@@ -6,6 +6,7 @@ const findAll = async ({ limit, offset, search }) => {
   let query = `
     SELECT
       s.id,
+      s.student_code,
       s.first_name,
       s.last_name,
       s.email,
@@ -28,6 +29,7 @@ const findAll = async ({ limit, offset, search }) => {
   if (search) {
     query += `
       WHERE
+        s.student_code LIKE ? OR
         s.first_name LIKE ? OR
         s.last_name  LIKE ? OR
         CONCAT(s.first_name, ' ', s.last_name) LIKE ? OR
@@ -35,12 +37,12 @@ const findAll = async ({ limit, offset, search }) => {
         s.phone LIKE ?
     `;
     const term = `%${search}%`;
-    params.push(term, term, term, term, term);
+    params.push(term, term, term, term, term, term);
   }
 
   query += ` ORDER BY s.created_at DESC`;
 
-  const limitInt  = parseInt(limit, 10);
+  const limitInt = parseInt(limit, 10);
   const offsetInt = parseInt(offset, 10);
   query += ` LIMIT ${limitInt} OFFSET ${offsetInt}`;
 
@@ -55,6 +57,7 @@ const countAll = async ({ search }) => {
   if (search) {
     query += `
       WHERE
+        s.student_code LIKE ? OR
         s.first_name LIKE ? OR
         s.last_name  LIKE ? OR
         CONCAT(s.first_name, ' ', s.last_name) LIKE ? OR
@@ -62,7 +65,7 @@ const countAll = async ({ search }) => {
         s.phone LIKE ?
     `;
     const term = `%${search}%`;
-    params.push(term, term, term, term, term);
+    params.push(term, term, term, term, term, term);
   }
 
   const [rows] = await pool.execute(query, params);
@@ -73,6 +76,7 @@ const findById = async (id) => {
   const [rows] = await pool.execute(
     `SELECT
        s.id,
+       s.student_code,
        s.first_name,
        s.last_name,
        s.email,
@@ -91,6 +95,33 @@ const findById = async (id) => {
      WHERE s.id = ?
      LIMIT 1`,
     [id]
+  );
+  return rows[0] || null;
+};
+
+const findByCode = async (code) => {
+  const [rows] = await pool.execute(
+    `SELECT
+       s.id,
+       s.student_code,
+       s.first_name,
+       s.last_name,
+       s.email,
+       s.phone,
+       s.date_of_birth,
+       s.gender,
+       s.address,
+       s.enrollment_date,
+       s.is_active,
+       s.created_at,
+       s.updated_at,
+       c.id   AS class_id,
+       c.name AS class_name
+     FROM students s
+     LEFT JOIN classes c ON s.class_id = c.id
+     WHERE s.student_code = ?
+     LIMIT 1`,
+    [code]
   );
   return rows[0] || null;
 };
@@ -157,32 +188,43 @@ const linkParent = async ({ parent_id, student_id, relation, is_primary }) => {
     [
       parent_id,
       student_id,
-      relation   !== undefined ? relation   : 'guardian',
+      relation !== undefined ? relation : 'guardian',
       is_primary !== undefined ? is_primary : 0,
     ]
   );
 };
 
+const getNextSequenceNumber = async (year) => {
+  const [rows] = await pool.execute(
+    `SELECT MAX(CAST(SUBSTRING_INDEX(student_code, '-', -1) AS UNSIGNED)) as max_seq 
+     FROM students 
+     WHERE student_code LIKE ?`,
+    [`SMS-${year}-%`]
+  );
+  return (rows[0].max_seq || 0) + 1;
+};
+
 const create = async ({
-  first_name, last_name, email, phone,
+  student_code, first_name, last_name, email, phone,
   date_of_birth, gender, address,
   enrollment_date, class_id,
 }) => {
   const [result] = await pool.execute(
     `INSERT INTO students
-       (first_name, last_name, email, phone, date_of_birth, gender,
+       (student_code, first_name, last_name, email, phone, date_of_birth, gender,
         address, enrollment_date, class_id, is_active, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())`,
     [
+      student_code,
       first_name,
       last_name,
       email,
-      phone           !== undefined ? phone           : null,
-      date_of_birth   !== undefined ? date_of_birth   : null,
-      gender          !== undefined ? gender          : null,
-      address         !== undefined ? address         : null,
+      phone !== undefined ? phone : null,
+      date_of_birth !== undefined ? date_of_birth : null,
+      gender !== undefined ? gender : null,
+      address !== undefined ? address : null,
       enrollment_date !== undefined ? enrollment_date : null,
-      class_id        !== undefined ? class_id        : null,
+      class_id !== undefined ? class_id : null,
     ]
   );
   return findById(result.insertId);
@@ -208,16 +250,16 @@ const update = async (id, {
        updated_at      = NOW()
      WHERE id = ?`,
     [
-      first_name      !== undefined ? first_name      : null,
-      last_name       !== undefined ? last_name       : null,
-      email           !== undefined ? email           : null,
-      phone           !== undefined ? phone           : null,
-      date_of_birth   !== undefined ? date_of_birth   : null,
-      gender          !== undefined ? gender          : null,
-      address         !== undefined ? address         : null,
+      first_name !== undefined ? first_name : null,
+      last_name !== undefined ? last_name : null,
+      email !== undefined ? email : null,
+      phone !== undefined ? phone : null,
+      date_of_birth !== undefined ? date_of_birth : null,
+      gender !== undefined ? gender : null,
+      address !== undefined ? address : null,
       enrollment_date !== undefined ? enrollment_date : null,
-      class_id        !== undefined ? class_id        : null,
-      is_active       !== undefined ? is_active       : null,
+      class_id !== undefined ? class_id : null,
+      is_active !== undefined ? is_active : null,
       id,
     ]
   );
@@ -238,6 +280,7 @@ const search = async (query) => {
   const [rows] = await pool.execute(
     `SELECT
        s.id,
+       s.student_code,
        s.first_name,
        s.last_name,
        s.email,
@@ -249,13 +292,14 @@ const search = async (query) => {
      FROM students s
      LEFT JOIN classes c ON s.class_id = c.id
      WHERE
+       s.student_code LIKE ? OR
        s.first_name LIKE ? OR
        s.last_name  LIKE ? OR
        CONCAT(s.first_name, ' ', s.last_name) LIKE ? OR
        s.email LIKE ? OR
        s.phone LIKE ?
      ORDER BY s.first_name ASC`,
-    [term, term, term, term, term]
+    [term, term, term, term, term, term]
   );
   return rows;
 };
@@ -264,11 +308,13 @@ module.exports = {
   findAll,
   countAll,
   findById,
+  findByCode,
   findByEmail,
   findParentsByStudentId,
   findParentByIdOrName,
   findParentStudentLink,
   linkParent,
+  getNextSequenceNumber,
   create,
   update,
   remove,
