@@ -1,76 +1,42 @@
-import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from './api-client';
 import { Attendance } from './types';
-import { mockAttendance } from './mock-data';
 
 export const useAttendance = () => {
-  const [attendance, setAttendance] = useState<Attendance[]>(mockAttendance);
+  const queryClient = useQueryClient();
 
-  const addAttendance = (record: Omit<Attendance, 'id' | 'recordedAt'>) => {
-    const newRecord: Attendance = {
-      ...record,
-      id: `att-${Date.now()}`,
-      recordedAt: new Date()
-    };
-    setAttendance([...attendance, newRecord]);
-    return newRecord;
+  const recordAttendanceMutation = useMutation({
+    mutationFn: async (records: Omit<Attendance, 'id' | 'recordedAt'>[]) => {
+      // Map frontend fields to backend (studentId -> student_id, etc.)
+      const formattedRecords = records.map(r => ({
+        student_id: r.studentId,
+        class_id: r.classId,
+        date: r.date instanceof Date ? r.date.toISOString().split('T')[0] : r.date,
+        status: r.status,
+        remarks: r.remarks || ''
+      }));
+      await apiClient.post('/attendance/record', { records: formattedRecords });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+    }
+  });
+
+  const fetchClassAttendance = async (classId: string, date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    const response = await apiClient.get(`/attendance/class/${classId}?date=${dateStr}`);
+    return response.data.data;
   };
 
-  const updateAttendance = (id: string, updates: Partial<Attendance>) => {
-    setAttendance(attendance.map(a => a.id === id ? { ...a, ...updates } : a));
-  };
-
-  const deleteAttendance = (id: string) => {
-    setAttendance(attendance.filter(a => a.id !== id));
-  };
-
-  const getClassAttendance = (classId: string, date?: Date) => {
-    return attendance.filter(a => {
-      if (a.classId !== classId) return false;
-      if (date) {
-        const recordDate = new Date(a.date);
-        return recordDate.toDateString() === date.toDateString();
-      }
-      return true;
-    });
-  };
-
-  const getStudentAttendance = (studentId: string, classId?: string) => {
-    return attendance.filter(a => {
-      if (a.studentId !== studentId) return false;
-      if (classId && a.classId !== classId) return false;
-      return true;
-    });
-  };
-
-  const getAttendanceStats = (studentId: string, classId?: string) => {
-    const records = getStudentAttendance(studentId, classId);
-    const present = records.filter(a => a.status === 'present').length;
-    const absent = records.filter(a => a.status === 'absent').length;
-    const late = records.filter(a => a.status === 'late').length;
-    const total = records.length;
-    const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
-
-    return { present, absent, late, total, percentage };
-  };
-
-  const recordBulkAttendance = (records: Omit<Attendance, 'id' | 'recordedAt'>[]) => {
-    const newRecords = records.map(record => ({
-      ...record,
-      id: `att-${Date.now()}-${Math.random()}`,
-      recordedAt: new Date()
-    }));
-    setAttendance([...attendance, ...newRecords]);
-    return newRecords;
+  const fetchStudentAttendance = async (studentId: string) => {
+    const response = await apiClient.get(`/attendance/student/${studentId}`);
+    return response.data; // { success, data, stats }
   };
 
   return {
-    attendance,
-    addAttendance,
-    updateAttendance,
-    deleteAttendance,
-    getClassAttendance,
-    getStudentAttendance,
-    getAttendanceStats,
-    recordBulkAttendance
+    recordBulkAttendance: recordAttendanceMutation.mutateAsync,
+    isRecording: recordAttendanceMutation.isPending,
+    fetchClassAttendance,
+    fetchStudentAttendance
   };
 };

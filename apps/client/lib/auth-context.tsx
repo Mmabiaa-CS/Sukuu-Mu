@@ -1,83 +1,125 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { User, AuthContextType } from './types';
-import { mockUsers } from './mock-data';
+import { User, AuthContextType, UserRole } from './types';
+import { apiClient } from './api-client';
+import { useQueryClient } from '@tanstack/react-query';
 
+// ── Token helpers (sessionStorage only — cleared when browser tab/session ends) ──
+const TOKEN_KEY = 'sukuu_token';
+
+const getStoredToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return sessionStorage.getItem(TOKEN_KEY);
+};
+
+const setStoredToken = (token: string) => {
+  if (typeof window !== 'undefined') sessionStorage.setItem(TOKEN_KEY, token);
+};
+
+const clearStoredToken = () => {
+  if (typeof window !== 'undefined') {
+    sessionStorage.removeItem(TOKEN_KEY);
+    // Also clear any old localStorage keys in case they exist from previous versions
+    localStorage.removeItem('school_token');
+    localStorage.removeItem('school_user');
+  }
+};
+
+// ── Helpers to map API response to User type ──────────────────────────────────
+const mapApiUser = (userData: any): User => ({
+  id: userData.id,
+  email: userData.email,
+  name: userData.name,
+  firstName: (userData.name ?? '').split(' ')[0],
+  lastName: (userData.name ?? '').split(' ').slice(1).join(' '),
+  role: userData.role as UserRole,
+  is_active: userData.is_active,
+});
+
+// ── Context ───────────────────────────────────────────────────────────────────
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize user from localStorage on mount
+  // ── On mount: restore session from API using stored token ─────────────────
   useEffect(() => {
-    const storedUser = localStorage.getItem('school_user');
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser) as User;
-        setUser(parsedUser);
-      } catch (error) {
-        console.error('Failed to parse stored user:', error);
-        localStorage.removeItem('school_user');
-      }
+    const token = getStoredToken();
+    if (!token) {
+      setIsLoading(false);
+      return;
     }
-    setIsLoading(false);
+
+    // Token exists — verify it with the API and fetch fresh user data
+    apiClient
+      .get('/auth/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        const userData = res.data.data;
+        setUser(mapApiUser(userData));
+      })
+      .catch(() => {
+        // Token is invalid/expired — clear it
+        clearStoredToken();
+        setUser(null);
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
+  // ── Login ─────────────────────────────────────────────────────────────────
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Mock authentication - find user in mock data
-      const foundUser = mockUsers.find(
-        u => u.email === email && u.password === password
-      );
+      const response = await apiClient.post('/auth/login', { email, password });
+      const { token, user: userData } = response.data.data;
 
-      if (!foundUser) {
-        throw new Error('Invalid email or password');
-      }
-
-      // Remove password before storing
-      const { password: _, ...userWithoutPassword } = foundUser;
-      setUser(userWithoutPassword as User);
-      localStorage.setItem('school_user', JSON.stringify(userWithoutPassword));
-    } catch (error) {
-      throw error;
+      // Store token (sessionStorage only — no user data persisted)
+      setStoredToken(token);
+      setUser(mapApiUser(userData));
+    } catch (error: any) {
+      const msg =
+        error.response?.data?.message ||
+        (error.message === 'Network Error'
+          ? 'Cannot connect to server. Is it running?'
+          : 'Invalid credentials');
+      throw new Error(msg);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
+  // ── Logout ────────────────────────────────────────────────────────────────
   const logout = useCallback(() => {
+    clearStoredToken();
     setUser(null);
-    localStorage.removeItem('school_user');
-  }, []);
+    // Cancel all in-flight queries so no 401 triggers the interceptor redirect
+    queryClient.clear();
+  }, [queryClient]);
 
-  const updateProfile = useCallback(async (updates: Partial<Pick<User, 'firstName' | 'lastName' | 'phone' | 'address'>>) => {
-    setUser((prevUser) => {
-      if (!prevUser) {
-        throw new Error('No active user session');
+  // ── Update profile (optimistic, no persistence beyond re-fetch) ───────────
+  const updateProfile = useCallback(
+    async (updates: Partial<Pick<User, 'firstName' | 'lastName' | 'phone' | 'address'>>) => {
+      setUser((prev) => (prev ? { ...prev, ...updates } : prev));
+    },
+    []
+  );
+
+  // ── Change password ───────────────────────────────────────────────────────
+  const changePassword = useCallback(
+    async (current_password: string, new_password: string) => {
+      if (!user) throw new Error('No active user session');
+      try {
+        await apiClient.patch('/auth/change-password', { current_password, new_password });
+      } catch (error: any) {
+        throw new Error(error.response?.data?.message || 'Failed to change password');
       }
-      const updatedUser = { ...prevUser, ...updates };
-      localStorage.setItem('school_user', JSON.stringify(updatedUser));
-      return updatedUser;
-    });
-  }, []);
-
-  const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
-    if (!user) {
-      throw new Error('No active user session');
-    }
-
-    const matchingMockUser = mockUsers.find((u) => u.email === user.email);
-    if (!matchingMockUser || matchingMockUser.password !== currentPassword) {
-      throw new Error('Current password is incorrect');
-    }
-
-    if (newPassword.length < 6) {
-      throw new Error('New password must be at least 6 characters');
-    }
-  }, [user]);
+    },
+    [user]
+  );
 
   const value: AuthContextType = {
     user,

@@ -1,117 +1,84 @@
-import { useState } from 'react';
-import { Fee, Payment, Receipt } from './types';
-import { mockFees, mockPayments, mockReceipts } from './mock-data';
+'use client';
 
-export const useFinances = () => {
-  const [fees, setFees] = useState<Fee[]>(mockFees);
-  const [payments, setPayments] = useState<Payment[]>(mockPayments);
-  const [receipts, setReceipts] = useState<Receipt[]>(mockReceipts);
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from './api-client';
+import { Fee, Payment } from './types';
 
-  const addFee = (fee: Omit<Fee, 'id' | 'createdAt'>) => {
-    const newFee: Fee = {
-      ...fee,
-      id: `fee-${Date.now()}`,
-      createdAt: new Date()
-    };
-    setFees([...fees, newFee]);
-    return newFee;
-  };
+export function useFinances() {
+  const queryClient = useQueryClient();
 
-  const updateFee = (id: string, updates: Partial<Fee>) => {
-    setFees(fees.map(f => f.id === id ? { ...f, ...updates } : f));
-  };
+  // All student fee records
+  const { data: fees = [], isLoading: feesLoading } = useQuery<any[]>({
+    queryKey: ['student-fees'],
+    queryFn: async () => {
+      const response = await apiClient.get('/fees/student-fees');
+      return response.data.data || response.data;
+    },
+  });
 
-  const deleteFee = (id: string) => {
-    setFees(fees.filter(f => f.id !== id));
-  };
+  // All payments
+  const { data: payments = [], isLoading: paymentsLoading } = useQuery<Payment[]>({
+    queryKey: ['payments'],
+    queryFn: async () => {
+      const response = await apiClient.get('/fees');
+      return response.data.data || response.data;
+    },
+  });
 
-  const addPayment = (payment: Omit<Payment, 'id' | 'createdAt'>) => {
-    const newPayment: Payment = {
-      ...payment,
-      id: `pay-${Date.now()}`,
-      createdAt: new Date()
-    };
-    setPayments([...payments, newPayment]);
+  // Fee structures
+  const { data: structures = [], isLoading: structuresLoading } = useQuery<any[]>({
+    queryKey: ['fee-structures'],
+    queryFn: async () => {
+      const response = await apiClient.get('/fees/structures');
+      return response.data.data || response.data;
+    },
+  });
 
-    // Update fee status based on payment
-    const fee = fees.find(f => f.id === payment.feeId);
-    if (fee) {
-      if (payment.amount >= fee.amount) {
-        updateFee(payment.feeId, { status: 'paid' });
-      } else if (payment.amount > 0) {
-        updateFee(payment.feeId, { status: 'partial' });
-      }
-    }
+  // Record payment
+  const recordPaymentMutation = useMutation({
+    mutationFn: async (paymentData: any) => {
+      const response = await apiClient.post('/fees/pay', paymentData);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+    },
+  });
 
-    // Create receipt
-    const newReceipt: Receipt = {
-      id: `rcpt-${Date.now()}`,
-      paymentId: newPayment.id,
-      studentId: payment.studentId,
-      receiptNumber: payment.receiptNumber,
-      totalAmount: payment.amount,
-      issueDate: payment.paymentDate,
-      paidBy: ''
-    };
-    setReceipts([...receipts, newReceipt]);
-
-    return newPayment;
-  };
+  // Statistics
+  const { data: report } = useQuery({
+    queryKey: ['fee-report'],
+    queryFn: async () => {
+      const response = await apiClient.get('/fees/reports/summary');
+      return response.data.data;
+    },
+  });
 
   const getStudentFees = (studentId: string) => {
-    return fees.filter(f => f.studentId === studentId);
+    return fees.filter((f: any) => f.student_id === parseInt(studentId));
   };
 
   const getStudentPayments = (studentId: string) => {
-    return payments.filter(p => p.studentId === studentId);
-  };
-
-  const getStudentReceipts = (studentId: string) => {
-    return receipts.filter(r => r.studentId === studentId);
+    return payments.filter((p: any) => p.student_id === parseInt(studentId));
   };
 
   const getStudentBalance = (studentId: string) => {
     const studentFees = getStudentFees(studentId);
-    const totalFees = studentFees.reduce((sum, f) => sum + f.amount, 0);
-    
-    const studentPayments = getStudentPayments(studentId);
-    const totalPaid = studentPayments.reduce((sum, p) => sum + p.amount, 0);
-
-    return {
-      totalFees,
-      totalPaid,
-      balance: totalFees - totalPaid,
-      studentFees,
-      studentPayments
-    };
-  };
-
-  const getFeeDetails = (feeId: string) => {
-    const fee = fees.find(f => f.id === feeId);
-    const feePayments = payments.filter(p => p.feeId === feeId);
-    const totalPaid = feePayments.reduce((sum, p) => sum + p.amount, 0);
-
-    return {
-      fee,
-      payments: feePayments,
-      totalPaid,
-      balance: fee ? fee.amount - totalPaid : 0,
-      isPaid: fee ? totalPaid >= fee.amount : false
-    };
+    const totalFees = studentFees.reduce((sum: number, f: any) => sum + parseFloat(f.total_fee), 0);
+    const totalPaid = studentFees.reduce((sum: number, f: any) => sum + parseFloat(f.total_paid), 0);
+    const balance = totalFees - totalPaid;
+    return { totalFees, totalPaid, balance };
   };
 
   return {
     fees,
     payments,
-    receipts,
-    addFee,
-    updateFee,
-    deleteFee,
-    addPayment,
+    structures,
+    report,
     getStudentFees,
     getStudentPayments,
-    getStudentReceipts,
     getStudentBalance,
-    getFeeDetails
+    isLoading: feesLoading || paymentsLoading || structuresLoading,
+    recordPayment: recordPaymentMutation.mutateAsync,
   };
-};
+}

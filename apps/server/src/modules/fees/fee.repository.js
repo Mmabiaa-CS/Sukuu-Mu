@@ -66,10 +66,10 @@ const createStructure = async ({
     [
       name,
       total_fee,
-      class_id      !== undefined ? class_id      : null,
-      term          !== undefined ? term          : null,
+      class_id !== undefined ? class_id : null,
+      term !== undefined ? term : null,
       academic_year !== undefined ? academic_year : null,
-      description   !== undefined ? description   : null,
+      description !== undefined ? description : null,
     ]
   );
   return findStructureById(result.insertId);
@@ -88,13 +88,13 @@ const updateStructure = async (id, { name, total_fee, class_id, term, academic_y
        updated_at    = NOW()
      WHERE id = ?`,
     [
-      name          !== undefined ? name          : null,
-      total_fee     !== undefined ? total_fee     : null,
-      class_id      !== undefined ? class_id      : null,
-      term          !== undefined ? term          : null,
+      name !== undefined ? name : null,
+      total_fee !== undefined ? total_fee : null,
+      class_id !== undefined ? class_id : null,
+      term !== undefined ? term : null,
       academic_year !== undefined ? academic_year : null,
-      description   !== undefined ? description   : null,
-      is_active     !== undefined ? is_active     : null,
+      description !== undefined ? description : null,
+      is_active !== undefined ? is_active : null,
       id,
     ]
   );
@@ -146,7 +146,7 @@ const findAllPayments = async ({ limit, offset, search }) => {
 
   query += ` ORDER BY fp.payment_date DESC`;
 
-  const limitInt  = parseInt(limit, 10);
+  const limitInt = parseInt(limit, 10);
   const offsetInt = parseInt(offset, 10);
   query += ` LIMIT ${limitInt} OFFSET ${offsetInt}`;
 
@@ -261,14 +261,14 @@ const recordPayment = async ({
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
     [
       student_id,
-      fee_structure_id  !== undefined ? fee_structure_id  : null,
+      fee_structure_id !== undefined ? fee_structure_id : null,
       amount_paid,
       total_fee,
       payment_date,
-      payment_method    !== undefined ? payment_method    : 'cash',
-      reference         !== undefined ? reference         : null,
-      notes             !== undefined ? notes             : null,
-      recorded_by       !== undefined ? recorded_by       : null,
+      payment_method !== undefined ? payment_method : 'cash',
+      reference !== undefined ? reference : null,
+      notes !== undefined ? notes : null,
+      recorded_by !== undefined ? recorded_by : null,
     ]
   );
   return findPaymentById(result.insertId);
@@ -286,10 +286,10 @@ const updatePayment = async (id, {
        updated_at     = NOW()
      WHERE id = ?`,
     [
-      amount_paid    !== undefined ? amount_paid    : null,
+      amount_paid !== undefined ? amount_paid : null,
       payment_method !== undefined ? payment_method : null,
-      reference      !== undefined ? reference      : null,
-      notes          !== undefined ? notes          : null,
+      reference !== undefined ? reference : null,
+      notes !== undefined ? notes : null,
       id,
     ]
   );
@@ -419,6 +419,35 @@ const findStudentFeesByStudentId = async (student_id) => {
   return rows;
 };
 
+const findAllStudentFees = async () => {
+  const [rows] = await pool.execute(
+    `SELECT
+       sf.id,
+       sf.total_fee,
+       sf.total_paid,
+       sf.balance,
+       sf.is_cleared,
+       sf.due_date,
+       sf.created_at,
+       sf.updated_at,
+       s.id         AS student_id,
+       s.first_name AS student_first_name,
+       s.last_name  AS student_last_name,
+       s.student_code,
+       c.name       AS class_name,
+       fs.id        AS fee_structure_id,
+       fs.name      AS fee_structure_name,
+       fs.term,
+       fs.academic_year
+     FROM student_fees sf
+     JOIN students s        ON sf.student_id = s.id
+     LEFT JOIN classes c    ON s.class_id    = c.id
+     JOIN fee_structures fs ON sf.fee_structure_id = fs.id
+     ORDER BY sf.created_at DESC`
+  );
+  return rows;
+};
+
 const updateStudentFeeBalance = async (student_id, fee_structure_id, amount_paid) => {
   await pool.execute(
     `UPDATE student_fees SET
@@ -481,9 +510,9 @@ const getNextReceiptSequence = async (year) => {
 };
 
 const generateReceiptNumber = async () => {
-  const year     = new Date().getFullYear();
+  const year = new Date().getFullYear();
   const sequence = await getNextReceiptSequence(year);
-  const padded   = String(sequence).padStart(5, '0');
+  const padded = String(sequence).padStart(5, '0');
   return `RCP-${year}-${padded}`;
 };
 
@@ -556,12 +585,13 @@ module.exports = {
   findStructureById,
   findStructureByIdOrName,
   createStructure,
-   findStudentsByClassIds,
+  findStudentsByClassIds,
   findExistingStudentFee,
   createStudentFee,
   linkStructureToClass,
   findClassesByStructureId,
   findStudentFeesByStudentId,
+  findAllStudentFees,
   updateStudentFeeBalance,
   getStudentFeesSummary,
   findClassByIdOrName,

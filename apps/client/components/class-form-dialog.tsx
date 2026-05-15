@@ -23,7 +23,7 @@ import {
 interface ClassFormDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (classData: Omit<Class, 'id' | 'createdAt'>) => void;
+  onSubmit: (classData: Omit<Class, 'id' | 'createdAt' | 'created_at' | 'total_students'>) => void;
   initialData?: Class;
   isEditing?: boolean;
 }
@@ -35,13 +35,14 @@ export function ClassFormDialog({
   initialData,
   isEditing = false
 }: ClassFormDialogProps) {
-  const [formData, setFormData] = useState<Omit<Class, 'id' | 'createdAt'>>({
+  const [formData, setFormData] = useState<Omit<Class, 'id' | 'createdAt' | 'created_at' | 'total_students'>>({
     name: initialData?.name || '',
     code: initialData?.code || '',
     description: initialData?.description || '',
     level: initialData?.level || 1,
     academicYear: initialData?.academicYear || '2024-2025',
-    capacity: initialData?.capacity || 40
+    capacity: initialData?.capacity || 40,
+    is_active: initialData?.is_active ?? 1
   });
 
   const handleSubmit = (e: React.FormEvent) => {

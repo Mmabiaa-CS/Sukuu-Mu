@@ -1,67 +1,81 @@
-import { useState, useCallback } from 'react';
+'use client';
+
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from './api-client';
 import { Class } from './types';
-import { mockClasses, mockStudents } from './mock-data';
+import { useState } from 'react';
+import { useStudents } from './use-students';
 
 export function useClasses() {
-  const [classes, setClasses] = useState<Class[]>(mockClasses);
-  const [searchTerm, setSearchTerm] = useState('');
+  const queryClient = useQueryClient();
 
-  const filteredClasses = classes.filter((cls) => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      cls.name.toLowerCase().includes(searchLower) ||
-      cls.code.toLowerCase().includes(searchLower)
-    );
+  const { data: classes = [], isLoading, error } = useQuery<Class[]>({
+    queryKey: ['classes'],
+    queryFn: async () => {
+      const response = await apiClient.get('/classes');
+      return response.data.data || response.data;
+    },
   });
 
-  const addClass = useCallback((cls: Omit<Class, 'id' | 'createdAt'>) => {
-    const newClass: Class = {
-      ...cls,
-      id: `class-${Date.now()}`,
-      createdAt: new Date()
-    };
-    setClasses((prev) => [...prev, newClass]);
-    return newClass;
-  }, []);
-
-  const updateClass = useCallback((id: string, updates: Partial<Class>) => {
-    setClasses((prev) =>
-      prev.map((cls) =>
-        cls.id === id ? { ...cls, ...updates } : cls
-      )
-    );
-  }, []);
-
-  const deleteClass = useCallback((id: string) => {
-    setClasses((prev) => prev.filter((cls) => cls.id !== id));
-  }, []);
-
-  const getStudentsInClass = useCallback(
-    (classId: string) => {
-      return mockStudents.filter((s) => s.classId === classId);
+  const addClassMutation = useMutation({
+    mutationFn: async (newClass: Omit<Class, 'id'>) => {
+      const response = await apiClient.post('/classes', newClass);
+      return response.data.data;
     },
-    []
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['classes'] });
+    },
+  });
+
+  const updateClassMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: number; updates: Partial<Class> }) => {
+      const response = await apiClient.put(`/classes/${id}`, updates);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['classes'] });
+    },
+  });
+
+  const deleteClassMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiClient.delete(`/classes/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['classes'] });
+    },
+  });
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const { students } = useStudents();
+
+  const filteredClasses = classes.filter(c =>
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getClassFillPercentage = useCallback(
-    (classId: string) => {
-      const cls = classes.find((c) => c.id === classId);
-      if (!cls) return 0;
-      const students = getStudentsInClass(classId);
-      return Math.round((students.length / cls.capacity) * 100);
-    },
-    [classes, getStudentsInClass]
-  );
+  const getStudentsInClass = (classId: number) => {
+    return students.filter(s => s.class_id === classId);
+  };
+
+  const getClassFillPercentage = (classId: number) => {
+    const cls = classes.find(c => c.id === classId);
+    if (!cls || !cls.capacity) return 0;
+    const count = getStudentsInClass(classId).length;
+    return Math.round((count / cls.capacity) * 100);
+  };
 
   return {
     classes,
     filteredClasses,
     searchTerm,
     setSearchTerm,
-    addClass,
-    updateClass,
-    deleteClass,
+    isLoading,
+    error,
+    addClass: addClassMutation.mutateAsync,
+    updateClass: updateClassMutation.mutateAsync,
+    deleteClass: deleteClassMutation.mutateAsync,
     getStudentsInClass,
-    getClassFillPercentage
+    getClassFillPercentage,
   };
 }

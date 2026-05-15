@@ -1,47 +1,66 @@
-import { useState, useCallback } from 'react';
+'use client';
+
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from './api-client';
 import { Subject } from './types';
-import { mockSubjects } from './mock-data';
+import { useState } from 'react';
 
 export function useSubjects() {
-  const [subjects, setSubjects] = useState<Subject[]>(mockSubjects);
-  const [searchTerm, setSearchTerm] = useState('');
+  const queryClient = useQueryClient();
 
-  const filteredSubjects = subjects.filter((subject) => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      subject.name.toLowerCase().includes(searchLower) ||
-      subject.code.toLowerCase().includes(searchLower)
-    );
+  const { data: subjects = [], isLoading, error } = useQuery<Subject[]>({
+    queryKey: ['subjects'],
+    queryFn: async () => {
+      const response = await apiClient.get('/subjects');
+      return response.data.data || response.data;
+    },
   });
 
-  const addSubject = useCallback((subject: Omit<Subject, 'id'>) => {
-    const newSubject: Subject = {
-      ...subject,
-      id: `subject-${Date.now()}`
-    };
-    setSubjects((prev) => [...prev, newSubject]);
-    return newSubject;
-  }, []);
+  const addSubjectMutation = useMutation({
+    mutationFn: async (newSubject: Omit<Subject, 'id'>) => {
+      const response = await apiClient.post('/subjects', newSubject);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subjects'] });
+    },
+  });
 
-  const updateSubject = useCallback((id: string, updates: Partial<Subject>) => {
-    setSubjects((prev) =>
-      prev.map((subject) =>
-        subject.id === id ? { ...subject, ...updates } : subject
-      )
-    );
-  }, []);
+  const updateSubjectMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: number; updates: Partial<Subject> }) => {
+      const response = await apiClient.put(`/subjects/${id}`, updates);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subjects'] });
+    },
+  });
 
-  const deleteSubject = useCallback((id: string) => {
-    setSubjects((prev) => prev.filter((subject) => subject.id !== id));
-  }, []);
+  const deleteSubjectMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiClient.delete(`/subjects/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subjects'] });
+    },
+  });
+
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredSubjects = subjects.filter(s =>
+    s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return {
     subjects,
     filteredSubjects,
     searchTerm,
     setSearchTerm,
-    addSubject,
-    updateSubject,
-    deleteSubject
+    isLoading,
+    error,
+    addSubject: addSubjectMutation.mutateAsync,
+    updateSubject: updateSubjectMutation.mutateAsync,
+    deleteSubject: deleteSubjectMutation.mutateAsync,
   };
 }

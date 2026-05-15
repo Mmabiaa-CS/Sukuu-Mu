@@ -5,18 +5,22 @@ import { useAuth } from '@/lib/auth-context';
 import { useAttendance } from '@/lib/use-attendance';
 import { canRecordAttendance, getTeacherClasses } from '@/lib/permissions';
 import { useRouter } from 'next/navigation';
-import { mockStudents, mockClasses } from '@/lib/mock-data';
+import { useStudents } from '@/lib/use-students';
+import { useClasses } from '@/lib/use-classes';
 import { Student } from '@/lib/types';
 import { CheckCircle2, X, Clock, Users, CalendarCheck, AlertCircle, ChevronDown } from 'lucide-react';
 
 export default function AttendancePage() {
   const { user } = useAuth();
   const router = useRouter();
-  const { attendance, addAttendance, recordBulkAttendance, getClassAttendance } = useAttendance();
+  const { recordBulkAttendance, fetchClassAttendance, isRecording } = useAttendance();
+  const { classes, isLoading: classesLoading } = useClasses();
+  const { students, isLoading: studentsLoading } = useStudents();
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [markingAll, setMarkingAll] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [todayAttendance, setTodayAttendance] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) {
@@ -33,23 +37,24 @@ export default function AttendancePage() {
   }
 
   const accessibleClasses = useMemo(() => {
-    if (user.role === 'admin' || user.role === 'manager') return mockClasses;
+    if (user.role === 'admin' || user.role === 'manager') return classes;
     if (user.role === 'teacher') {
       const classIds = getTeacherClasses(user.id);
-      return mockClasses.filter((c) => classIds.includes(c.id));
+      return classes.filter((c) => classIds.includes(c.id));
     }
     return [];
-  }, [user]);
+  }, [user, classes]);
 
   const accessibleStudents = useMemo(() => {
     if (!selectedClass) return [];
-    return mockStudents.filter((s) => s.classId === selectedClass);
-  }, [selectedClass]);
+    return students.filter((s) => s.class_id === parseInt(selectedClass));
+  }, [selectedClass, students]);
 
-  const todayAttendance = useMemo(() => {
-    if (!selectedClass) return [];
-    return getClassAttendance(selectedClass, new Date(selectedDate));
-  }, [selectedClass, selectedDate, getClassAttendance]);
+  useEffect(() => {
+    if (selectedClass) {
+      fetchClassAttendance(selectedClass, new Date(selectedDate)).then(setTodayAttendance);
+    }
+  }, [selectedClass, selectedDate]);
 
   const stats = useMemo(() => {
     const present = todayAttendance.filter((a) => a.status === 'present').length;
@@ -61,26 +66,31 @@ export default function AttendancePage() {
     return { present, absent, late, total, recorded, rate };
   }, [todayAttendance, accessibleStudents]);
 
-  const handleRecordAttendance = (studentId: string, status: 'present' | 'absent' | 'late') => {
+  const handleRecordAttendance = async (studentId: number, status: 'present' | 'absent' | 'late') => {
     if (!selectedClass) return;
     setActionError(null);
     try {
-      addAttendance({ studentId, classId: selectedClass, date: new Date(selectedDate), status });
+      await recordBulkAttendance([{ studentId: studentId.toString(), classId: selectedClass, date: new Date(selectedDate), status }]);
+      // Refresh
+      fetchClassAttendance(selectedClass, new Date(selectedDate)).then(setTodayAttendance);
     } catch (error) {
       console.error('Failed to record attendance:', error);
       setActionError('Could not record attendance. Please try again.');
     }
   };
 
-  const handleBulkMarkPresent = () => {
+  const handleBulkMarkPresent = async () => {
     if (!selectedClass) return;
     setActionError(null);
     setMarkingAll(true);
     try {
       const records = accessibleStudents
-        .filter((s) => !todayAttendance.find((a) => a.studentId === s.id))
-        .map((s) => ({ studentId: s.id, classId: selectedClass, date: new Date(selectedDate), status: 'present' as const }));
-      if (records.length > 0) recordBulkAttendance(records);
+        .filter((s) => !todayAttendance.find((a) => a.student_id === s.id))
+        .map((s) => ({ studentId: s.id.toString(), classId: selectedClass, date: new Date(selectedDate), status: 'present' as const }));
+      if (records.length > 0) {
+        await recordBulkAttendance(records);
+        fetchClassAttendance(selectedClass, new Date(selectedDate)).then(setTodayAttendance);
+      }
     } catch (error) {
       console.error('Failed to mark attendance in bulk:', error);
       setActionError('Could not mark all students as present. Please try again.');
@@ -90,9 +100,9 @@ export default function AttendancePage() {
   };
 
   const canRecord = canRecordAttendance(user, selectedClass || undefined);
-  const selectedClassName = mockClasses.find((c) => c.id === selectedClass)?.name ?? '';
+  const selectedClassName = classes.find((c) => c.id === parseInt(selectedClass || '0'))?.name ?? '';
 
-  const initials = (s: Student) => `${s.firstName?.[0] ?? ''}${s.lastName?.[0] ?? ''}`.toUpperCase();
+  const initials = (s: Student) => `${s.first_name?.[0] ?? ''}${s.last_name?.[0] ?? ''}`.toUpperCase();
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -437,7 +447,7 @@ export default function AttendancePage() {
                 </thead>
                 <tbody>
                   {accessibleStudents.map((student) => {
-                    const record = todayAttendance.find((a) => a.studentId === student.id);
+                    const record = todayAttendance.find((a) => a.student_id === student.id);
                     const status = record?.status;
 
                     return (
@@ -446,7 +456,7 @@ export default function AttendancePage() {
                           <div className="ap-student-cell">
                             <div className="ap-avatar">{initials(student)}</div>
                             <div>
-                              <div className="ap-student-name">{student.firstName} {student.lastName}</div>
+                              <div className="ap-student-name">{student.first_name} {student.last_name}</div>
                               <div className="ap-student-class">{student.email}</div>
                             </div>
                           </div>

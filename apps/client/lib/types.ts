@@ -10,61 +10,69 @@ export enum UserRole {
 export interface User {
   id: string;
   email: string;
-  password: string; // Note: Mock only, never store plaintext in production
+  name: string;
+  password?: string;
   firstName: string;
   lastName: string;
-  role: UserRole;
+  role: UserRole | string;
+  is_active?: number;
   phone?: string;
   address?: string;
-  createdAt: Date;
+  createdAt?: Date;
 }
 
 // Student interface
 export interface Student {
-  id: string;
-  firstName: string;
-  lastName: string;
+  id: number;
+  student_code: string;
+  first_name: string;
+  last_name: string;
   email: string;
   phone?: string;
-  dateOfBirth?: Date;
+  date_of_birth?: string;
   address?: string;
-  classId: string;
-  enrollmentDate: Date;
-  status: 'active' | 'inactive' | 'graduated';
+  class_id?: number | string;
+  enrollment_date: string;
+  is_active: number;
 }
 
-// Class interface
 export interface Class {
-  id: string;
+  id: number;
   name: string;
   code: string;
   description?: string;
-  level: number; // e.g., 1-12 for grade levels
-  academicYear: string; // e.g., "2024-2025"
+  level: number;
   capacity: number;
-  createdAt: Date;
+  academicYear: string;
+  is_active: number;
+  total_students?: number;
+  createdAt?: string;
+  created_at?: string;
 }
 
 // Subject interface
 export interface Subject {
-  id: string;
+  id: number;
   name: string;
   code: string;
   description?: string;
-  creditHours: number;
+  created_at?: string;
 }
 
 // Teacher interface
 export interface Teacher {
-  id: string;
-  firstName: string;
-  lastName: string;
+  id: number;
+  employee_id: string;
+  first_name: string;
+  last_name: string;
   email: string;
   phone?: string;
+  gender?: string;
   qualification?: string;
-  joinDate: Date;
-  subjectIds: string[]; // References to Subject IDs
-  status: 'active' | 'inactive' | 'on-leave';
+  join_date?: string;
+  is_active: number;
+  password?: string;
+  subjectIds?: number[];
 }
 
 // Class-Subject assignment
@@ -95,13 +103,16 @@ export interface DashboardStats {
   totalSubjects: number;
 }
 
-// Class-Teacher assignment
-export interface ClassTeacher {
-  id: string;
-  classId: string;
-  teacherId: string;
-  subjectId: string;
-  assignedAt: Date;
+// Parent interface
+export interface Parent {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  phone: string;
+  gender?: string;
+  occupation?: string;
+  address?: string;
 }
 
 // Fee structure

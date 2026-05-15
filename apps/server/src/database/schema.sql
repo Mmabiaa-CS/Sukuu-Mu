@@ -214,3 +214,17 @@ SELECT
     c.created_at,
     (SELECT COUNT(*) FROM students s WHERE s.class_id = c.id AND s.is_active = 1) AS total_students
 FROM classes c;
+
+-- 11. Attendance
+CREATE TABLE IF NOT EXISTS attendance (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  student_id INT NOT NULL,
+  class_id INT NOT NULL,
+  date DATE NOT NULL,
+  status ENUM('present', 'absent', 'late') DEFAULT 'present',
+  remarks TEXT,
+  recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(student_id, class_id, date),
+  FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+  FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
+);

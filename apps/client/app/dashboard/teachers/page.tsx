@@ -25,14 +25,16 @@ export default function TeachersPage() {
 
   const accessibleTeachers = useMemo(() => {
     if (statusFilter === 'all') return filteredTeachers;
-    return filteredTeachers.filter((t) => t.status === statusFilter);
+    if (statusFilter === 'active') return filteredTeachers.filter((t: any) => t.is_active === 1);
+    if (statusFilter === 'inactive') return filteredTeachers.filter((t: any) => t.is_active === 0);
+    return [];
   }, [filteredTeachers, statusFilter]);
 
   const statusCounts = useMemo(() => ({
     all: filteredTeachers.length,
-    active: filteredTeachers.filter((t) => t.status === 'active').length,
-    'on-leave': filteredTeachers.filter((t) => t.status === 'on-leave').length,
-    inactive: filteredTeachers.filter((t) => t.status === 'inactive').length,
+    active: filteredTeachers.filter((t: any) => t.is_active === 1).length,
+    'on-leave': 0, // Not explicitly in backend yet
+    inactive: filteredTeachers.filter((t: any) => t.is_active === 0).length,
   }), [filteredTeachers]);
 
   const handleAddTeacher = (data: Omit<Teacher, 'id'>) => {
@@ -59,7 +61,7 @@ export default function TeachersPage() {
   };
 
   const initials = (t: Teacher) =>
-    `${t.firstName?.[0] ?? ''}${t.lastName?.[0] ?? ''}`.toUpperCase();
+    `${t.first_name?.[0] ?? ''}${t.last_name?.[0] ?? ''}`.toUpperCase();
 
   return (
     <>
@@ -374,7 +376,7 @@ export default function TeachersPage() {
                           <div className="tp-teacher-cell">
                             <div className="tp-avatar">{initials(teacher)}</div>
                             <div>
-                              <div className="tp-teacher-name">{teacher.firstName} {teacher.lastName}</div>
+                              <div className="tp-teacher-name">{teacher.first_name} {teacher.last_name}</div>
                               <div className="tp-teacher-email">{teacher.email}</div>
                             </div>
                           </div>
@@ -393,9 +395,9 @@ export default function TeachersPage() {
                         </td>
                         <td className="tp-cell-secondary">{teacher.phone || '—'}</td>
                         <td>
-                          <span className={`tp-status ${teacher.status}`}>
+                          <span className={`tp-status ${teacher.is_active ? 'active' : 'inactive'}`}>
                             <span className="tp-status-dot" />
-                            {teacher.status === 'on-leave' ? 'On Leave' : teacher.status.charAt(0).toUpperCase() + teacher.status.slice(1)}
+                            {teacher.is_active ? 'Active' : 'Inactive'}
                           </span>
                         </td>
                         <td>
@@ -444,15 +446,15 @@ export default function TeachersPage() {
         onClose={handleFormClose}
         onSubmit={editingTeacher
           ? (data: Omit<Teacher, 'id'>) => {
-              setActionError(null);
-              try {
-                updateTeacher(editingTeacher.id, data);
-                setEditingTeacher(null);
-              } catch (error) {
-                console.error('Failed to update teacher:', error);
-                setActionError('Could not update teacher. Please try again.');
-              }
+            setActionError(null);
+            try {
+              updateTeacher(editingTeacher.id, data);
+              setEditingTeacher(null);
+            } catch (error) {
+              console.error('Failed to update teacher:', error);
+              setActionError('Could not update teacher. Please try again.');
             }
+          }
           : handleAddTeacher}
         initialData={editingTeacher ?? undefined}
         isEditing={!!editingTeacher}

@@ -3,9 +3,11 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { Student } from '@/lib/types';
 import { useStudents } from '@/lib/use-students';
 import { StudentFormDialog } from '@/components/student-form-dialog';
 import { canManageStudents, filterStudentsByAccess } from '@/lib/permissions';
+import { useClasses } from '@/lib/use-classes';
 import { Plus, Search, MoreHorizontal, Trash2, Eye, SlidersHorizontal, X } from 'lucide-react';
 
 export default function StudentsPage() {
@@ -19,37 +21,42 @@ export default function StudentsPage() {
     addStudent,
     updateStudent,
     deleteStudent,
-    getClassName,
   } = useStudents();
+  const { classes } = useClasses();
+
+  const getClassName = (classId: number | string) => {
+    const classItem = classes.find(c => String(c.id) === String(classId));
+    return classItem?.name || 'Unknown Class';
+  };
 
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingStudent, setEditingStudent] = useState(null);
-  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [editingStudent, setEditingStudent] = useState<any>(null);
+  const [activeMenu, setActiveMenu] = useState<number | string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const accessibleStudents = useMemo(() => {
     const base = filterStudentsByAccess(user, filteredStudents);
     if (statusFilter === 'all') return base;
-    return base.filter(s => s.status === statusFilter);
+    return base.filter(s => (s.is_active === 1 ? 'active' : 'inactive') === statusFilter);
   }, [user, filteredStudents, statusFilter]);
 
   const canAdd = canManageStudents(user);
 
-  const handleAddStudent = (data) => { addStudent(data); setIsFormOpen(false); };
-  const handleEditStudent = (student) => { setEditingStudent(student); setIsFormOpen(true); };
+  const handleAddStudent = (data: any) => { addStudent(data); setIsFormOpen(false); };
+  const handleEditStudent = (student: Student) => { setEditingStudent(student); setIsFormOpen(true); };
   const handleFormClose = () => { setIsFormOpen(false); setEditingStudent(null); };
-  const handleDeleteStudent = (id) => {
+  const handleDeleteStudent = (id: number) => {
     if (confirm('Are you sure you want to delete this student?')) deleteStudent(id);
   };
 
-  const initials = (s) =>
-    `${s.firstName?.[0] ?? ''}${s.lastName?.[0] ?? ''}`.toUpperCase();
+  const initials = (s: Student) =>
+    `${s.first_name?.[0] ?? ''}${s.last_name?.[0] ?? ''}`.toUpperCase();
 
   const statusCounts = useMemo(() => ({
     all: filterStudentsByAccess(user, filteredStudents).length,
-    active: filterStudentsByAccess(user, filteredStudents).filter(s => s.status === 'active').length,
-    inactive: filterStudentsByAccess(user, filteredStudents).filter(s => s.status === 'inactive').length,
-    graduated: filterStudentsByAccess(user, filteredStudents).filter(s => s.status === 'graduated').length,
+    active: filterStudentsByAccess(user, filteredStudents).filter(s => s.is_active === 1).length,
+    inactive: filterStudentsByAccess(user, filteredStudents).filter(s => s.is_active === 0).length,
+    graduated: 0,
   }), [user, filteredStudents]);
 
   return (
@@ -493,33 +500,33 @@ export default function StudentsPage() {
                           <div className="sp-avatar">{initials(student)}</div>
                           <div>
                             <div className="sp-student-name">
-                              {student.firstName} {student.lastName}
+                              {student.first_name} {student.last_name}
                             </div>
                             <div className="sp-student-email">{student.email}</div>
                           </div>
                         </div>
                       </td>
                       <td className="sp-cell-secondary">
-                        {getClassName(student.classId) || '—'}
+                        {student.class_id ? getClassName(student.class_id) : '—'}
                       </td>
                       <td className="sp-cell-secondary">
                         {student.phone || '—'}
                       </td>
                       <td>
-                        <span className={`sp-status ${student.status}`}>
+                        <span className={`sp-status ${student.is_active === 1 ? 'active' : 'inactive'}`}>
                           <span className="sp-status-dot" />
-                          {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
+                          {student.is_active === 1 ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td>
                         <div className="sp-actions-wrap">
                           <button
                             className="sp-menu-btn"
-                            onClick={() => setActiveMenu(activeMenu === student.id ? null : student.id)}
+                            onClick={() => setActiveMenu(String(activeMenu) === String(student.id) ? null : student.id)}
                           >
                             <MoreHorizontal size={15} />
                           </button>
-                          {activeMenu === student.id && (
+                          {String(activeMenu) === String(student.id) && (
                             <div className="sp-dropdown">
                               <button
                                 className="sp-dropdown-item"
@@ -573,7 +580,7 @@ export default function StudentsPage() {
         isOpen={isFormOpen}
         onClose={handleFormClose}
         onSubmit={editingStudent
-          ? (data) => { updateStudent(editingStudent.id, data); setEditingStudent(null); }
+          ? (data) => { updateStudent({ id: editingStudent.id, updates: data }); setEditingStudent(null); }
           : handleAddStudent}
         initialData={editingStudent}
         isEditing={!!editingStudent}

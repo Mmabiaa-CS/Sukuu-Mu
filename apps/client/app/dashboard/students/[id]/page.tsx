@@ -3,9 +3,8 @@
 import { useAuth } from '@/lib/auth-context';
 import { useRouter, useParams } from 'next/navigation';
 import { useFinances } from '@/lib/use-finances';
-import { useAttendance } from '@/lib/use-attendance';
-import { canViewFinances, canViewAttendance } from '@/lib/permissions';
-import { mockStudents, mockClasses } from '@/lib/mock-data';
+import { useStudents } from '@/lib/use-students';
+import { useClasses } from '@/lib/use-classes';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -24,12 +23,14 @@ export default function StudentProfilePage() {
   const router = useRouter();
   const params = useParams();
   const studentId = params.id as string;
-  
-  const { getStudentBalance, getStudentPayments, getStudentFees } = useFinances();
-  const { getStudentAttendance, getAttendanceStats } = useAttendance();
 
-  const student = mockStudents.find(s => s.id === studentId);
-  const studentClass = student ? mockClasses.find(c => c.id === student.classId) : null;
+  const { getStudentBalance, getStudentPayments, getStudentFees } = useFinances();
+  const { fetchStudentAttendance } = useAttendance();
+  const { getStudentById, isLoading: studentsLoading } = useStudents();
+  const { classes, isLoading: classesLoading } = useClasses();
+
+  const student = getStudentById(studentId);
+  const studentClass = student ? classes.find(c => c.id === student.class_id) : null;
 
   if (!user) {
     router.push('/login');
@@ -68,13 +69,13 @@ export default function StudentProfilePage() {
   const attendanceRecords = getStudentAttendance(studentId);
   const attendanceStats = getAttendanceStats(studentId);
 
-  const age = new Date().getFullYear() - (student.dateOfBirth ? new Date(student.dateOfBirth).getFullYear() : 0);
+  const age = new Date().getFullYear() - (student.date_of_birth ? new Date(student.date_of_birth).getFullYear() : 0);
 
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{student.firstName} {student.lastName}</h1>
+          <h1 className="text-3xl font-bold">{student.first_name} {student.last_name}</h1>
           <p className="text-muted-foreground mt-2">ID: {student.id}</p>
         </div>
         <Button variant="outline" onClick={() => router.push('/dashboard/students')}>Back</Button>
@@ -100,7 +101,7 @@ export default function StudentProfilePage() {
           <div>
             <p className="text-sm text-muted-foreground">Date of Birth</p>
             <p className="text-lg font-medium">
-              {student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString() : 'N/A'} {age > 0 && `(${age} years old)`}
+              {student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : 'N/A'} {age > 0 && `(${age} years old)`}
             </p>
           </div>
           <div>
@@ -113,7 +114,7 @@ export default function StudentProfilePage() {
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Enrollment Date</p>
-            <p className="text-lg font-medium">{student.enrollmentDate.toLocaleDateString()}</p>
+            <p className="text-lg font-medium">{student.enrollment_date}</p>
           </div>
         </CardContent>
       </Card>

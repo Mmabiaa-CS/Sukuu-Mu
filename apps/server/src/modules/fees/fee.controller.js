@@ -125,6 +125,15 @@ const assignStructureToClasses = async (req, res, next) => {
   }
 };
 
+const getAllStudentFees = async (req, res, next) => {
+  try {
+    const data = await feeService.getAllStudentFees();
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 const getStudentFeeLedger = async (req, res, next) => {
   try {
     const data = await feeService.getStudentFeeLedger(Number(req.params.student_id));
@@ -147,7 +156,7 @@ const generateReceipt = async (req, res, next) => {
 const downloadReceipt = async (req, res, next) => {
   try {
     const payment_id = Number(req.params.payment_id);
-    const receipt    = await feeService.generateReceipt(payment_id);
+    const receipt = await feeService.generateReceipt(payment_id);
 
     if (!receipt.file_path) {
       return res.status(404).json({ success: false, message: 'Receipt file not found' });
@@ -183,8 +192,9 @@ const getOutstandingReport = async (req, res, next) => {
 
 module.exports = {
   getAllStructures,
-  updateFeeStructure,  
+  updateFeeStructure,
   assignStructureToClasses,
+  getAllStudentFees,
   getStudentFeeLedger,
   getFeeStructureById,
   createFeeStructure,
