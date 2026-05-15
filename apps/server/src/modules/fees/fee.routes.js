@@ -99,6 +99,17 @@ router.get('/receipts/:payment_id/download',
   feeController.downloadReceipt
 );
 
+/**
+ * @openapi
+ * /fees/student-fees:
+ *   get:
+ *     tags: [Fees]
+ *     summary: All student fee records (Billed vs Paid)
+ */
+router.get('/student-fees',
+  feeController.getAllStudentFees
+);
+
 // ── Student ledger ─────────────────────────────────────────────────────────
 /**
  * @openapi

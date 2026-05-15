@@ -1,11 +1,13 @@
 'use strict';
 
 const teacherRepository = require('./teacher.repository');
+const authRepository = require('../auth/auth.repository');
+const { hashPassword } = require('../../utils/hash.util');
 
 // ── Get all teachers ───────────────────────────────────────────────────────
 const getAllTeachers = async (query) => {
-  const page   = Math.max(parseInt(query.page)  || 1, 1);
-  const limit  = Math.min(parseInt(query.limit) || 10, 100);
+  const page = Math.max(parseInt(query.page) || 1, 1);
+  const limit = Math.min(parseInt(query.limit) || 10, 100);
   const offset = (page - 1) * limit;
   const search = query.search?.trim() || null;
 
@@ -61,10 +63,16 @@ const searchTeachers = async (query) => {
 
 // ── Create teacher ─────────────────────────────────────────────────────────
 const createTeacher = async (body) => {
-  const { first_name, last_name, email, employee_id, user_id } = body;
+  const { first_name, last_name, email, employee_id, user_id, password } = body;
 
   if (!first_name || !last_name || !email || !employee_id) {
     const err = new Error('first_name, last_name, email and employee_id are required');
+    err.status = 400;
+    throw err;
+  }
+
+  if (!password && !user_id) {
+    const err = new Error('A password is required to create a teacher account');
     err.status = 400;
     throw err;
   }
@@ -87,6 +95,7 @@ const createTeacher = async (body) => {
   }
 
   // If user_id provided make sure its not already linked to another teacher
+  let createdUserId = user_id;
   if (user_id) {
     const existingUser = await teacherRepository.findByUserId(user_id);
     if (existingUser) {
@@ -94,9 +103,35 @@ const createTeacher = async (body) => {
       err.status = 409;
       throw err;
     }
+  } else if (password) {
+    // Check if user already exists
+    const existingAppUser = await authRepository.findUserByEmail(email);
+    if (existingAppUser) {
+      const err = new Error('A system user with this email already exists.');
+      err.status = 409;
+      throw err;
+    }
+
+    // Get Teacher Role
+    const teacherRole = await authRepository.findRoleByName('teacher');
+    if (!teacherRole) {
+      const err = new Error('Teacher role not configured in the database');
+      err.status = 500;
+      throw err;
+    }
+
+    const hashed = await hashPassword(password);
+    const newUser = await authRepository.createUser({
+      name: `${first_name} ${last_name}`,
+      email,
+      password: hashed,
+      role_id: teacherRole.id
+    });
+    createdUserId = newUser.id;
   }
 
-  return teacherRepository.create(body);
+  const finalBody = { ...body, user_id: createdUserId };
+  return teacherRepository.create(finalBody);
 };
 
 // ── Update teacher ─────────────────────────────────────────────────────────

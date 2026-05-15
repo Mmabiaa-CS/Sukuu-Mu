@@ -6,8 +6,10 @@ const { signToken } = require('../../utils/jwt.util');
 
 // ── Login ──────────────────────────────────────────────────────────────────
 const login = async ({ email, password }) => {
+  console.log(`[DEBUG] Attempting login for email/username: "${email}"`);
   const user = await authRepository.findUserByEmail(email);
   if (!user) {
+    console.warn(`[DEBUG] User not found: "${email}"`);
     const err = new Error('Invalid email or password');
     err.status = 401;
     throw err;
@@ -21,6 +23,7 @@ const login = async ({ email, password }) => {
 
   const isMatch = await comparePassword(password, user.password);
   if (!isMatch) {
+    console.warn(`[DEBUG] Password mismatch for user: "${email}"`);
     const err = new Error('Invalid email or password');
     err.status = 401;
     throw err;
@@ -40,6 +43,7 @@ const login = async ({ email, password }) => {
       name: user.name,
       email: user.email,
       role: user.role_name,
+      is_active: user.is_active,
     },
   };
 };
@@ -91,6 +95,7 @@ const register = async ({ name, email, password, role_name }) => {
       name: created.name,
       email: created.email,
       role: roleName,
+      is_active: created.is_active,
     },
   };
 };

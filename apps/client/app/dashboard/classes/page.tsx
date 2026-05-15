@@ -20,10 +20,10 @@ export default function ClassesPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<Class | null>(null);
-  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const handleAddClass = (data: Omit<Class, 'id' | 'createdAt'>) => {
+  const handleAddClass = (data: Omit<Class, 'id' | 'createdAt' | 'created_at' | 'total_students'>) => {
     setActionError(null);
     try {
       addClass(data);
@@ -35,7 +35,7 @@ export default function ClassesPage() {
   };
   const handleEditClass = (cls: Class) => { setEditingClass(cls); setIsFormOpen(true); };
   const handleFormClose = () => { setIsFormOpen(false); setEditingClass(null); };
-  const handleDeleteClass = (id: string) => {
+  const handleDeleteClass = (id: number) => {
     if (!confirm('Are you sure you want to delete this class?')) return;
     setActionError(null);
     try {
@@ -47,12 +47,13 @@ export default function ClassesPage() {
   };
 
   const stats = useMemo(() => {
-    const totalEnrolled = filteredClasses.reduce(
+    const safeList = filteredClasses ?? [];
+    const totalEnrolled = safeList.reduce(
       (sum, cls) => sum + getStudentsInClass(cls.id).length, 0
     );
-    const totalCap = filteredClasses.reduce((sum, cls) => sum + (cls.capacity || 0), 0);
+    const totalCap = safeList.reduce((sum, cls) => sum + (cls.capacity || 0), 0);
     const avgFill = totalCap > 0 ? Math.round((totalEnrolled / totalCap) * 100) : 0;
-    return { total: filteredClasses.length, totalEnrolled, avgFill };
+    return { total: safeList.length, totalEnrolled, avgFill };
   }, [filteredClasses, getStudentsInClass]);
 
   return (
@@ -183,7 +184,7 @@ export default function ClassesPage() {
         <div className="cp-stats">
           <div className="cp-stat">
             <div className="cp-stat-icon">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>
             </div>
             <div className="cp-stat-label">Total Classes</div>
             <div className="cp-stat-value">{stats.total}</div>
@@ -191,7 +192,7 @@ export default function ClassesPage() {
           </div>
           <div className="cp-stat">
             <div className="cp-stat-icon">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
             </div>
             <div className="cp-stat-label">Total Enrolled</div>
             <div className="cp-stat-value">{stats.totalEnrolled}</div>
@@ -199,7 +200,7 @@ export default function ClassesPage() {
           </div>
           <div className="cp-stat">
             <div className="cp-stat-icon">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
             </div>
             <div className="cp-stat-label">Avg Fill Rate</div>
             <div className="cp-stat-value">{stats.avgFill}%</div>
@@ -337,16 +338,16 @@ export default function ClassesPage() {
         isOpen={isFormOpen}
         onClose={handleFormClose}
         onSubmit={editingClass
-          ? (data: Omit<Class, 'id' | 'createdAt'>) => {
-              setActionError(null);
-              try {
-                updateClass(editingClass.id, data);
-                setEditingClass(null);
-              } catch (error) {
-                console.error('Failed to update class:', error);
-                setActionError('Could not update class. Please try again.');
-              }
+          ? (data: Omit<Class, 'id' | 'createdAt' | 'created_at' | 'total_students'>) => {
+            setActionError(null);
+            try {
+              updateClass({ id: editingClass.id, updates: data });
+              setEditingClass(null);
+            } catch (error) {
+              console.error('Failed to update class:', error);
+              setActionError('Could not update class. Please try again.');
             }
+          }
           : handleAddClass}
         initialData={editingClass ?? undefined}
         isEditing={!!editingClass}

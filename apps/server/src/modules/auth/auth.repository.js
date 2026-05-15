@@ -20,7 +20,7 @@ const findAllUsers = async () => {
   return rows;
 };
 
-const findUserByEmail = async (email) => {
+const findUserByEmailOrUsername = async (identifier) => {
   const [rows] = await pool.execute(
     `SELECT
        u.id,
@@ -32,12 +32,15 @@ const findUserByEmail = async (email) => {
        r.name AS role_name
      FROM users u
      LEFT JOIN roles r ON u.role_id = r.id
-     WHERE u.email = ?
+     WHERE u.email = ? OR u.name = ?
      LIMIT 1`,
-    [email]
+    [identifier, identifier]
   );
   return rows[0] || null;
 };
+
+// Keep alias for backwards compatibility
+const findUserByEmail = findUserByEmailOrUsername;
 
 const findUserById = async (id) => {
   const [rows] = await pool.execute(

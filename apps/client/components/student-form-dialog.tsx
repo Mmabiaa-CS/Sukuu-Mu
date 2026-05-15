@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Student } from '@/lib/types';
-import { mockClasses } from '@/lib/mock-data';
+import { useClasses } from '@/lib/use-classes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -24,7 +24,7 @@ import {
 interface StudentFormDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (student: Omit<Student, 'id'>) => void;
+  onSubmit: (student: any) => void;
   initialData?: Student;
   isEditing?: boolean;
 }
@@ -36,17 +36,43 @@ export function StudentFormDialog({
   initialData,
   isEditing = false
 }: StudentFormDialogProps) {
-  const [formData, setFormData] = useState<Omit<Student, 'id'>>({
-    firstName: initialData?.firstName || '',
-    lastName: initialData?.lastName || '',
-    email: initialData?.email || '',
-    phone: initialData?.phone || '',
-    dateOfBirth: initialData?.dateOfBirth,
-    address: initialData?.address || '',
-    classId: initialData?.classId || '',
-    enrollmentDate: initialData?.enrollmentDate || new Date(),
-    status: initialData?.status || 'active'
+  const { classes } = useClasses();
+  const [formData, setFormData] = useState<Partial<Student>>({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    date_of_birth: '',
+    address: '',
+    class_id: '',
+    is_active: 1
   });
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        first_name: initialData.first_name || '',
+        last_name: initialData.last_name || '',
+        email: initialData.email || '',
+        phone: initialData.phone || '',
+        date_of_birth: initialData.date_of_birth ? initialData.date_of_birth.split('T')[0] : '',
+        address: initialData.address || '',
+        class_id: initialData.class_id || '',
+        is_active: initialData.is_active ?? 1
+      });
+    } else {
+      setFormData({
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        date_of_birth: '',
+        address: '',
+        class_id: '',
+        is_active: 1
+      });
+    }
+  }, [initialData, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,9 +99,9 @@ export function StudentFormDialog({
             <div className="space-y-1">
               <label className="text-sm font-medium">First Name *</label>
               <Input
-                value={formData.firstName}
+                value={formData.first_name}
                 onChange={(e) =>
-                  setFormData({ ...formData, firstName: e.target.value })
+                  setFormData({ ...formData, first_name: e.target.value })
                 }
                 required
               />
@@ -83,9 +109,9 @@ export function StudentFormDialog({
             <div className="space-y-1">
               <label className="text-sm font-medium">Last Name *</label>
               <Input
-                value={formData.lastName}
+                value={formData.last_name}
                 onChange={(e) =>
-                  setFormData({ ...formData, lastName: e.target.value })
+                  setFormData({ ...formData, last_name: e.target.value })
                 }
                 required
               />
@@ -118,15 +144,11 @@ export function StudentFormDialog({
             <label className="text-sm font-medium">Date of Birth</label>
             <Input
               type="date"
-              value={
-                formData.dateOfBirth
-                  ? new Date(formData.dateOfBirth).toISOString().split('T')[0]
-                  : ''
-              }
+              value={formData.date_of_birth || ''}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  dateOfBirth: e.target.value ? new Date(e.target.value) : undefined
+                  date_of_birth: e.target.value
                 })
               }
             />
@@ -144,15 +166,16 @@ export function StudentFormDialog({
 
           <div className="space-y-1">
             <label className="text-sm font-medium">Class *</label>
-            <Select value={formData.classId} onValueChange={(value) =>
-              setFormData({ ...formData, classId: value })
-            }>
+            <Select
+              value={String(formData.class_id)}
+              onValueChange={(value) => setFormData({ ...formData, class_id: value })}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select class" />
               </SelectTrigger>
               <SelectContent>
-                {mockClasses.map((cls) => (
-                  <SelectItem key={cls.id} value={cls.id}>
+                {classes.map((cls) => (
+                  <SelectItem key={cls.id} value={String(cls.id)}>
                     {cls.name}
                   </SelectItem>
                 ))}
@@ -162,16 +185,16 @@ export function StudentFormDialog({
 
           <div className="space-y-1">
             <label className="text-sm font-medium">Status</label>
-            <Select value={formData.status} onValueChange={(value: any) =>
-              setFormData({ ...formData, status: value })
-            }>
+            <Select
+              value={String(formData.is_active)}
+              onValueChange={(value) => setFormData({ ...formData, is_active: parseInt(value) })}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="graduated">Graduated</SelectItem>
+                <SelectItem value="1">Active</SelectItem>
+                <SelectItem value="0">Inactive</SelectItem>
               </SelectContent>
             </Select>
           </div>

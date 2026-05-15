@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -525,14 +527,14 @@ export default function LoginPage() {
                   htmlFor="email"
                   className={`field-label ${focusedField === 'email' ? 'focused' : ''}`}
                 >
-                  Email Address
+                  Email or Username
                 </label>
                 <div className="field-wrapper">
                   <input
                     id="email"
-                    type="email"
+                    type="text"
                     className="field-input"
-                    placeholder="admin@school.com"
+                    placeholder="admin or email@school.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     onFocus={() => setFocusedField('email')}
@@ -554,8 +556,9 @@ export default function LoginPage() {
                 <div className="field-wrapper">
                   <input
                     id="password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     className="field-input"
+                    style={{ paddingRight: '44px' }}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -564,6 +567,30 @@ export default function LoginPage() {
                     disabled={isSubmitting}
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(v => !v)}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      color: '#aaa',
+                      display: 'flex',
+                      alignItems: 'center',
+                      transition: 'color 0.15s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.color = '#555')}
+                    onMouseLeave={e => (e.currentTarget.style.color = '#aaa')}
+                    tabIndex={-1}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                   <div className="field-underline" />
                 </div>
               </div>
@@ -577,28 +604,6 @@ export default function LoginPage() {
                 {isSubmitting ? 'Signing in...' : 'Sign In →'}
               </button>
             </form>
-
-            {/* Demo credentials */}
-            <div className="demo-section">
-              <p className="demo-label">Demo Credentials</p>
-              <div className="demo-grid">
-                {[
-                  { role: 'Admin', cred: 'admin@school.com / admin123', e: 'admin@school.com', p: 'admin123' },
-                  { role: 'Manager', cred: 'manager@school.com / manager123', e: 'manager@school.com', p: 'manager123' },
-                  { role: 'Teacher', cred: 'teacher@school.com / teacher123', e: 'teacher@school.com', p: 'teacher123' },
-                ].map((d) => (
-                  <div
-                    key={d.role}
-                    className="demo-card"
-                    onClick={() => { setEmail(d.e); setPassword(d.p); }}
-                  >
-                    <span className="demo-role">{d.role}</span>
-                    <span className="demo-cred">{d.cred}</span>
-                    <span className="demo-arrow"></span>
-                  </div>
-                ))}
-              </div>
-            </div>
 
             <div className="form-footer">
               <p className="form-footer-text">© {new Date().getFullYear()} Sukuu Mu · All rights reserved</p>

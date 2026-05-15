@@ -111,9 +111,45 @@ const options = {
                         payment_method: { type: 'string', enum: ['cash', 'bank_transfer', 'mobile_money', 'cheque', 'other'] },
                         reference: { type: 'string' }
                     }
+                },
+                Attendance: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'integer' },
+                        student_id: { type: 'integer' },
+                        class_id: { type: 'integer' },
+                        date: { type: 'string', format: 'date' },
+                        status: { type: 'string', enum: ['present', 'absent', 'late'] },
+                        remarks: { type: 'string' },
+                        recorded_at: { type: 'string', format: 'date-time' }
+                    }
+                },
+                AuthResponse: {
+                    type: 'object',
+                    properties: {
+                        token: { type: 'string' },
+                        user: { $ref: '#/components/schemas/User' }
+                    }
+                },
+                Error: {
+                    type: 'object',
+                    properties: {
+                        success: { type: 'boolean', default: false },
+                        message: { type: 'string' }
+                    }
                 }
             }
         },
+        tags: [
+            { name: 'Auth', description: 'Authentication and user management' },
+            { name: 'Teachers', description: 'Teacher management and assignments' },
+            { name: 'Students', description: 'Student management and enrollments' },
+            { name: 'Classes', description: 'Class and room management' },
+            { name: 'Subjects', description: 'Subject registry' },
+            { name: 'Parents', description: 'Parent tracking module' },
+            { name: 'Attendance', description: 'Daily attendance logs' },
+            { name: 'Fees', description: 'School fee structures and payments' }
+        ],
         security: [
             {
                 bearerAuth: [],

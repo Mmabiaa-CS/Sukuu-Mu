@@ -18,7 +18,7 @@ export default function SubjectsPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
-  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const handleAddSubject = (data: Omit<Subject, 'id'>) => {
@@ -33,7 +33,7 @@ export default function SubjectsPage() {
   };
   const handleEditSubject = (subject: Subject) => { setEditingSubject(subject); setIsFormOpen(true); };
   const handleFormClose = () => { setIsFormOpen(false); setEditingSubject(null); };
-  const handleDeleteSubject = (id: string) => {
+  const handleDeleteSubject = (id: number) => {
     if (!confirm('Are you sure you want to delete this subject?')) return;
     setActionError(null);
     try {
@@ -45,8 +45,9 @@ export default function SubjectsPage() {
   };
 
   const stats = useMemo(() => {
-    const total = filteredSubjects.length;
-    const totalCredits = filteredSubjects.reduce((sum, s) => sum + (s.creditHours || 0), 0);
+    const safeList = filteredSubjects ?? [];
+    const total = safeList.length;
+    const totalCredits = safeList.reduce((sum, s) => sum + ((s as any).creditHours || 0), 0);
     const avgCredits = total > 0 ? Math.round(totalCredits / total) : 0;
     return { total, totalCredits, avgCredits };
   }, [filteredSubjects]);
@@ -166,7 +167,7 @@ export default function SubjectsPage() {
         <div className="sp-stats">
           <div className="sp-stat">
             <div className="sp-stat-icon">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>
             </div>
             <div className="sp-stat-label">Total Subjects</div>
             <div className="sp-stat-value">{stats.total}</div>
@@ -174,7 +175,7 @@ export default function SubjectsPage() {
           </div>
           <div className="sp-stat">
             <div className="sp-stat-icon">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
             </div>
             <div className="sp-stat-label">Total Credit Hours</div>
             <div className="sp-stat-value">{stats.totalCredits}</div>
@@ -182,7 +183,7 @@ export default function SubjectsPage() {
           </div>
           <div className="sp-stat">
             <div className="sp-stat-icon">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
             </div>
             <div className="sp-stat-label">Avg Credit Hours</div>
             <div className="sp-stat-value">{stats.avgCredits}</div>
@@ -254,7 +255,7 @@ export default function SubjectsPage() {
                       <td><span className="sp-subject-name">{subject.name}</span></td>
                       <td><span className="sp-code">{subject.code}</span></td>
                       <td><span className="sp-muted">{subject.description || '—'}</span></td>
-                      <td><span className="sp-credit-tag">{subject.creditHours} hrs</span></td>
+                      <td><span className="sp-credit-tag">{(subject as any).creditHours ?? '—'} hrs</span></td>
                       <td>
                         <div className="sp-actions-wrap">
                           <button
@@ -300,15 +301,15 @@ export default function SubjectsPage() {
         onClose={handleFormClose}
         onSubmit={editingSubject
           ? (data: Omit<Subject, 'id'>) => {
-              setActionError(null);
-              try {
-                updateSubject(editingSubject.id, data);
-                setEditingSubject(null);
-              } catch (error) {
-                console.error('Failed to update subject:', error);
-                setActionError('Could not update subject. Please try again.');
-              }
+            setActionError(null);
+            try {
+              updateSubject({ id: editingSubject.id, updates: data });
+              setEditingSubject(null);
+            } catch (error) {
+              console.error('Failed to update subject:', error);
+              setActionError('Could not update subject. Please try again.');
             }
+          }
           : handleAddSubject}
         initialData={editingSubject ?? undefined}
         isEditing={!!editingSubject}

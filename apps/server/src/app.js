@@ -8,9 +8,34 @@ const { swaggerUi, specs } = require('./config/swagger');
 
 const app = express();
 
-// ── Security & parsing middleware ──────────────────────────────────────────
-app.use(helmet());
-app.use(cors());
+// ── CORS — must come before everything else, including helmet ─────────────────
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  process.env.CLIENT_URL,
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, Postman, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    const err = new Error(`CORS: Origin "${origin}" not allowed`);
+    err.status = 403;
+    return callback(err);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+// Handle preflight for all routes
+app.options('*', cors());
+
+// ── Security & parsing middleware ─────────────────────────────────────────────
+app.use(helmet({
+  crossOriginResourcePolicy: false, // let CORS headers through
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -46,6 +71,10 @@ app.use('/api/v1/classes', classRoutes);
 //students routes 
 const studentRoutes = require('./modules/students/student.routes');
 app.use('/api/v1/students', studentRoutes);
+
+//attendance routes
+const attendanceRoutes = require('./modules/attendance/attendance.routes');
+app.use('/api/v1/attendance', attendanceRoutes);
 
 // After your middleware block, before the 404 handler
 app.use('/api/v1/auth', authRoutes);

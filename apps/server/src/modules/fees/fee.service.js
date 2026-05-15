@@ -59,8 +59,8 @@ const updateFeeStructure = async (id, body) => {
 
 // ── Get all payments ───────────────────────────────────────────────────────
 const getAllPayments = async (query) => {
-  const page   = Math.max(parseInt(query.page)  || 1, 1);
-  const limit  = Math.min(parseInt(query.limit) || 10, 100);
+  const page = Math.max(parseInt(query.page) || 1, 1);
+  const limit = Math.min(parseInt(query.limit) || 10, 100);
   const offset = (page - 1) * limit;
   const search = query.search?.trim() || null;
 
@@ -96,17 +96,17 @@ const getStudentPayments = async (student_id) => {
 
   return {
     student: {
-      id:         student.id,
+      id: student.id,
       first_name: student.first_name,
-      last_name:  student.last_name,
-      email:      student.email,
+      last_name: student.last_name,
+      email: student.email,
     },
     summary: {
-      total_fee:      summary.total_fee      || 0,
-      total_paid:     summary.total_paid     || 0,
-      balance:        summary.balance        || 0,
+      total_fee: summary.total_fee || 0,
+      total_paid: summary.total_paid || 0,
+      balance: summary.balance || 0,
       total_payments: summary.total_payments || 0,
-      is_cleared:     (summary.balance || 0) <= 0,
+      is_cleared: (summary.balance || 0) <= 0,
     },
     payments,
   };
@@ -139,7 +139,7 @@ const recordPayment = async (body, recorded_by) => {
 
   // 2. Resolve fee structure if provided
   let resolvedStructureId = null;
-  let resolvedTotalFee    = total_fee;
+  let resolvedTotalFee = total_fee;
 
   const structureIdentifier = fee_structure_id || fee_structure_name;
   if (structureIdentifier) {
@@ -175,7 +175,7 @@ const recordPayment = async (body, recorded_by) => {
 
   // 4. Get existing balance to check for overpayment
   const existingBalance = await feeRepository.getStudentBalance(student.id);
-  const currentBalance  = existingBalance.balance !== null
+  const currentBalance = existingBalance.balance !== null
     ? Number(existingBalance.balance)
     : Number(resolvedTotalFee);
 
@@ -189,11 +189,11 @@ const recordPayment = async (body, recorded_by) => {
 
   // 5. Record payment
   const payment = await feeRepository.recordPayment({
-    student_id:       student.id,
+    student_id: student.id,
     fee_structure_id: resolvedStructureId,
-    amount_paid:      Number(amount_paid),
-    total_fee:        Number(resolvedTotalFee),
-    payment_date:     payment_date || new Date(),
+    amount_paid: Number(amount_paid),
+    total_fee: Number(resolvedTotalFee),
+    payment_date: payment_date || new Date(),
     payment_method,
     reference,
     notes,
@@ -206,15 +206,15 @@ const recordPayment = async (body, recorded_by) => {
   return {
     payment,
     student: {
-      id:         student.id,
+      id: student.id,
       first_name: student.first_name,
-      last_name:  student.last_name,
+      last_name: student.last_name,
     },
     summary: {
-      total_fee:   updatedBalance.total_fee   || 0,
-      total_paid:  updatedBalance.total_paid  || 0,
-      balance:     updatedBalance.balance     || 0,
-      is_cleared: (updatedBalance.balance     || 0) <= 0,
+      total_fee: updatedBalance.total_fee || 0,
+      total_paid: updatedBalance.total_paid || 0,
+      balance: updatedBalance.balance || 0,
+      is_cleared: (updatedBalance.balance || 0) <= 0,
     },
   };
 };
@@ -266,7 +266,7 @@ const assignStructureToClasses = async (structure_id, { class_ids, class_names, 
 
   // 2. Resolve classes — accept ids or names or both
   const identifiers = [
-    ...(class_ids   || []),
+    ...(class_ids || []),
     ...(class_names || []),
   ];
 
@@ -314,8 +314,8 @@ const assignStructureToClasses = async (structure_id, { class_ids, class_names, 
   }
 
   // 5. Create student fee record for each student (skip if already exists)
-  let created  = 0;
-  let skipped  = 0;
+  let created = 0;
+  let skipped = 0;
 
   for (const student of students) {
     const existing = await feeRepository.findExistingStudentFee(student.id, structure_id);
@@ -323,9 +323,9 @@ const assignStructureToClasses = async (structure_id, { class_ids, class_names, 
       skipped++;
     } else {
       await feeRepository.createStudentFee({
-        student_id:       student.id,
+        student_id: student.id,
         fee_structure_id: structure_id,
-        total_fee:        structure.total_fee,
+        total_fee: structure.total_fee,
         due_date,
       });
       created++;
@@ -333,11 +333,11 @@ const assignStructureToClasses = async (structure_id, { class_ids, class_names, 
   }
 
   return {
-    message:     `Fee structure "${structure.name}" assigned to ${resolvedClasses.length} class(es)`,
-    structure:   { id: structure.id, name: structure.name, total_fee: structure.total_fee },
-    classes:     resolvedClasses,
+    message: `Fee structure "${structure.name}" assigned to ${resolvedClasses.length} class(es)`,
+    structure: { id: structure.id, name: structure.name, total_fee: structure.total_fee },
+    classes: resolvedClasses,
     students_affected: {
-      total:   students.length,
+      total: students.length,
       created,
       skipped,
     },
@@ -345,6 +345,11 @@ const assignStructureToClasses = async (structure_id, { class_ids, class_names, 
 };
 
 // ── Get student fee ledger ─────────────────────────────────────────────────
+// ── Get all student fee records (Overview) ─────────────────────────────────
+const getAllStudentFees = async () => {
+  return feeRepository.findAllStudentFees();
+};
+
 const getStudentFeeLedger = async (student_id) => {
   const student = await feeRepository.findStudentByIdOrName(student_id);
   if (!student) {
@@ -360,18 +365,18 @@ const getStudentFeeLedger = async (student_id) => {
 
   return {
     student: {
-      id:         student.id,
+      id: student.id,
       first_name: student.first_name,
-      last_name:  student.last_name,
-      email:      student.email,
+      last_name: student.last_name,
+      email: student.email,
     },
     summary: {
       total_structures: Number(summary.total_structures) || 0,
-      total_fee:        Number(summary.total_fee)        || 0,
-      total_paid:       Number(summary.total_paid)       || 0,
-      total_balance:    Number(summary.total_balance)    || 0,
-      cleared_count:    Number(summary.cleared_count)    || 0,
-      fully_cleared:    Number(summary.total_balance)    <= 0,
+      total_fee: Number(summary.total_fee) || 0,
+      total_paid: Number(summary.total_paid) || 0,
+      total_balance: Number(summary.total_balance) || 0,
+      cleared_count: Number(summary.cleared_count) || 0,
+      fully_cleared: Number(summary.total_balance) <= 0,
     },
     fee_breakdown: fees,
   };
@@ -393,8 +398,8 @@ const generateReceipt = async (payment_id) => {
   if (existing) {
     return {
       receipt_no: existing.receipt_no,
-      file_path:  existing.file_path,
-      message:    'Receipt already exists',
+      file_path: existing.file_path,
+      message: 'Receipt already exists',
     };
   }
 
@@ -417,9 +422,9 @@ const generateReceipt = async (payment_id) => {
     student,
     parent,
     summary: {
-      total_fee:  balanceSummary.total_fee  || payment.total_fee,
+      total_fee: balanceSummary.total_fee || payment.total_fee,
       total_paid: balanceSummary.total_paid || payment.amount_paid,
-      balance:    balanceSummary.balance    || 0,
+      balance: balanceSummary.balance || 0,
     },
   });
 
@@ -430,13 +435,13 @@ const generateReceipt = async (payment_id) => {
     receipt_no,
     file_path,
     student: {
-      id:           student.id,
+      id: student.id,
       student_code: student.student_code,
-      name:         `${student.first_name} ${student.last_name}`,
-      class:        student.class_name,
+      name: `${student.first_name} ${student.last_name}`,
+      class: student.class_name,
     },
     parent: parent ? {
-      name:  `${parent.first_name} ${parent.last_name}`,
+      name: `${parent.first_name} ${parent.last_name}`,
       phone: parent.phone,
     } : null,
     message: 'Receipt generated successfully',
@@ -474,19 +479,19 @@ const getFeeReport = async ({ academic_year, term, class_id }) => {
      ORDER BY c.name, fs.term`,
     [
       academic_year || null, academic_year || null,
-      term          || null, term          || null,
-      class_id      || null, class_id      || null,
+      term || null, term || null,
+      class_id || null, class_id || null,
     ]
   );
 
   // Overall totals
   const totals = rows.reduce((acc, row) => ({
-    total_billed:      acc.total_billed      + Number(row.total_billed),
-    total_collected:   acc.total_collected   + Number(row.total_collected),
+    total_billed: acc.total_billed + Number(row.total_billed),
+    total_collected: acc.total_collected + Number(row.total_collected),
     total_outstanding: acc.total_outstanding + Number(row.total_outstanding),
-    total_cleared:     acc.total_cleared     + Number(row.total_cleared),
-    total_pending:     acc.total_pending     + Number(row.total_pending),
-    total_students:    acc.total_students    + Number(row.total_students),
+    total_cleared: acc.total_cleared + Number(row.total_cleared),
+    total_pending: acc.total_pending + Number(row.total_pending),
+    total_students: acc.total_students + Number(row.total_students),
   }), {
     total_billed: 0, total_collected: 0, total_outstanding: 0,
     total_cleared: 0, total_pending: 0, total_students: 0,
@@ -537,8 +542,8 @@ const getOutstandingReport = async ({ academic_year, term, class_id }) => {
      ORDER BY sf.balance DESC, c.name`,
     [
       academic_year || null, academic_year || null,
-      term          || null, term          || null,
-      class_id      || null, class_id      || null,
+      term || null, term || null,
+      class_id || null, class_id || null,
     ]
   );
 
@@ -555,7 +560,8 @@ const getOutstandingReport = async ({ academic_year, term, class_id }) => {
 module.exports = {
   getAllStructures,
   updateFeeStructure,
-  assignStructureToClasses,  
+  assignStructureToClasses,
+  getAllStudentFees,
   getStudentFeeLedger,
   getFeeStructureById,
   createFeeStructure,
@@ -565,7 +571,7 @@ module.exports = {
   updatePayment,
   deletePayment,
   getPaymentById,
-  generateReceipt,          
-  getFeeReport,             
-  getOutstandingReport,     
+  generateReceipt,
+  getFeeReport,
+  getOutstandingReport,
 };
