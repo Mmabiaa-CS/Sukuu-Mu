@@ -134,6 +134,53 @@ const getStudentFeeLedger = async (req, res, next) => {
   }
 };
 
+const generateReceipt = async (req, res, next) => {
+  try {
+    const payment_id = Number(req.params.payment_id);
+    const data = await feeService.generateReceipt(payment_id);
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const downloadReceipt = async (req, res, next) => {
+  try {
+    const payment_id = Number(req.params.payment_id);
+    const receipt    = await feeService.generateReceipt(payment_id);
+
+    if (!receipt.file_path) {
+      return res.status(404).json({ success: false, message: 'Receipt file not found' });
+    }
+
+    return res.download(receipt.file_path, `${receipt.receipt_no}.pdf`, (err) => {
+      if (err) next(err);
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getFeeReport = async (req, res, next) => {
+  try {
+    const { academic_year, term, class_id } = req.query;
+    const data = await feeService.getFeeReport({ academic_year, term, class_id });
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getOutstandingReport = async (req, res, next) => {
+  try {
+    const { academic_year, term, class_id } = req.query;
+    const data = await feeService.getOutstandingReport({ academic_year, term, class_id });
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getAllStructures,
   updateFeeStructure,  
@@ -147,4 +194,8 @@ module.exports = {
   recordPayment,
   updatePayment,
   deletePayment,
+  generateReceipt,
+  downloadReceipt,
+  getFeeReport,
+  getOutstandingReport
 };

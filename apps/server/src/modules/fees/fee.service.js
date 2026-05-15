@@ -2,6 +2,7 @@
 
 const { body } = require('express-validator');
 const feeRepository = require('./fee.repository');
+const { generateReceiptPDF } = require('../../utils/receipt.util');
 
 // ── Fee Structures ─────────────────────────────────────────────────────────
 const getAllStructures = async () => {
@@ -376,6 +377,181 @@ const getStudentFeeLedger = async (student_id) => {
   };
 };
 
+
+// ── Generate receipt for a payment ────────────────────────────────────────
+const generateReceipt = async (payment_id) => {
+  // 1. Get payment
+  const payment = await feeRepository.findPaymentById(payment_id);
+  if (!payment) {
+    const err = new Error(`Payment with id ${payment_id} not found`);
+    err.status = 404;
+    throw err;
+  }
+
+  // 2. Check if receipt already exists
+  const existing = await feeRepository.findReceiptByPaymentId(payment_id);
+  if (existing) {
+    return {
+      receipt_no: existing.receipt_no,
+      file_path:  existing.file_path,
+      message:    'Receipt already exists',
+    };
+  }
+
+  // 3. Get student with class
+  const student = await feeRepository.findStudentWithClass(payment.student_id);
+
+  // 4. Get primary parent
+  const parent = await feeRepository.findPrimaryParentByStudentId(payment.student_id);
+
+  // 5. Get student balance summary
+  const balanceSummary = await feeRepository.getStudentBalance(payment.student_id);
+
+  // 6. Generate receipt number
+  const receipt_no = await feeRepository.generateReceiptNumber();
+
+  // 7. Generate PDF
+  const file_path = await generateReceiptPDF({
+    receipt_no,
+    payment,
+    student,
+    parent,
+    summary: {
+      total_fee:  balanceSummary.total_fee  || payment.total_fee,
+      total_paid: balanceSummary.total_paid || payment.amount_paid,
+      balance:    balanceSummary.balance    || 0,
+    },
+  });
+
+  // 8. Save receipt record
+  await feeRepository.createReceipt({ payment_id, receipt_no, file_path });
+
+  return {
+    receipt_no,
+    file_path,
+    student: {
+      id:           student.id,
+      student_code: student.student_code,
+      name:         `${student.first_name} ${student.last_name}`,
+      class:        student.class_name,
+    },
+    parent: parent ? {
+      name:  `${parent.first_name} ${parent.last_name}`,
+      phone: parent.phone,
+    } : null,
+    message: 'Receipt generated successfully',
+  };
+};
+
+// ── Fee reports ────────────────────────────────────────────────────────────
+const getFeeReport = async ({ academic_year, term, class_id }) => {
+  // Total collected, outstanding, cleared per class
+  const [rows] = await pool.execute(
+    `SELECT
+       c.id                          AS class_id,
+       c.name                        AS class_name,
+       fs.academic_year,
+       fs.term,
+       fs.name                       AS structure_name,
+       COUNT(sf.student_id)          AS total_students,
+       SUM(sf.total_fee)             AS total_billed,
+       SUM(sf.total_paid)            AS total_collected,
+       SUM(sf.balance)               AS total_outstanding,
+       SUM(sf.is_cleared)            AS total_cleared,
+       COUNT(sf.student_id) - SUM(sf.is_cleared) AS total_pending,
+       ROUND(
+         (SUM(sf.total_paid) / NULLIF(SUM(sf.total_fee), 0)) * 100, 2
+       )                             AS collection_percentage
+     FROM student_fees sf
+     JOIN students s     ON sf.student_id       = s.id
+     JOIN classes c      ON s.class_id          = c.id
+     JOIN fee_structures fs ON sf.fee_structure_id = fs.id
+     WHERE
+       (? IS NULL OR fs.academic_year = ?) AND
+       (? IS NULL OR fs.term          = ?) AND
+       (? IS NULL OR c.id             = ?)
+     GROUP BY c.id, fs.id
+     ORDER BY c.name, fs.term`,
+    [
+      academic_year || null, academic_year || null,
+      term          || null, term          || null,
+      class_id      || null, class_id      || null,
+    ]
+  );
+
+  // Overall totals
+  const totals = rows.reduce((acc, row) => ({
+    total_billed:      acc.total_billed      + Number(row.total_billed),
+    total_collected:   acc.total_collected   + Number(row.total_collected),
+    total_outstanding: acc.total_outstanding + Number(row.total_outstanding),
+    total_cleared:     acc.total_cleared     + Number(row.total_cleared),
+    total_pending:     acc.total_pending     + Number(row.total_pending),
+    total_students:    acc.total_students    + Number(row.total_students),
+  }), {
+    total_billed: 0, total_collected: 0, total_outstanding: 0,
+    total_cleared: 0, total_pending: 0, total_students: 0,
+  });
+
+  totals.overall_collection_percentage = totals.total_billed > 0
+    ? Math.round((totals.total_collected / totals.total_billed) * 100 * 100) / 100
+    : 0;
+
+  return {
+    filters: { academic_year, term, class_id },
+    totals,
+    breakdown: rows,
+  };
+};
+
+// ── Outstanding balances report ────────────────────────────────────────────
+const getOutstandingReport = async ({ academic_year, term, class_id }) => {
+  const [rows] = await pool.execute(
+    `SELECT
+       s.id              AS student_id,
+       s.student_code,
+       s.first_name,
+       s.last_name,
+       c.name            AS class_name,
+       fs.name           AS structure_name,
+       fs.term,
+       fs.academic_year,
+       sf.total_fee,
+       sf.total_paid,
+       sf.balance,
+       sf.due_date,
+       p.first_name      AS parent_first_name,
+       p.last_name       AS parent_last_name,
+       p.phone           AS parent_phone
+     FROM student_fees sf
+     JOIN students s        ON sf.student_id       = s.id
+     JOIN classes c         ON s.class_id          = c.id
+     JOIN fee_structures fs ON sf.fee_structure_id = fs.id
+     LEFT JOIN parent_students ps ON ps.student_id = s.id AND ps.is_primary = 1
+     LEFT JOIN parents p    ON ps.parent_id        = p.id
+     WHERE
+       sf.is_cleared = 0 AND
+       sf.balance    > 0 AND
+       (? IS NULL OR fs.academic_year = ?) AND
+       (? IS NULL OR fs.term          = ?) AND
+       (? IS NULL OR c.id             = ?)
+     ORDER BY sf.balance DESC, c.name`,
+    [
+      academic_year || null, academic_year || null,
+      term          || null, term          || null,
+      class_id      || null, class_id      || null,
+    ]
+  );
+
+  const total_outstanding = rows.reduce((sum, r) => sum + Number(r.balance), 0);
+
+  return {
+    filters: { academic_year, term, class_id },
+    total_students_owing: rows.length,
+    total_outstanding,
+    students: rows,
+  };
+};
+
 module.exports = {
   getAllStructures,
   updateFeeStructure,
@@ -389,4 +565,7 @@ module.exports = {
   updatePayment,
   deletePayment,
   getPaymentById,
+  generateReceipt,          
+  getFeeReport,             
+  getOutstandingReport,     
 };

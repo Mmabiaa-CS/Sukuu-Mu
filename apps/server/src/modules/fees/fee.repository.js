@@ -457,6 +457,99 @@ const findClassByIdOrName = async (value) => {
   return rows[0] || null;
 };
 
+// ── Receipts ───────────────────────────────────────────────────────────────
+
+const getNextReceiptSequence = async (year) => {
+  await pool.execute(
+    `INSERT INTO receipt_sequences (year, last_sequence)
+     VALUES (?, 0)
+     ON DUPLICATE KEY UPDATE year = year`,
+    [year]
+  );
+
+  await pool.execute(
+    `UPDATE receipt_sequences SET last_sequence = last_sequence + 1 WHERE year = ?`,
+    [year]
+  );
+
+  const [rows] = await pool.execute(
+    `SELECT last_sequence FROM receipt_sequences WHERE year = ? LIMIT 1`,
+    [year]
+  );
+
+  return rows[0].last_sequence;
+};
+
+const generateReceiptNumber = async () => {
+  const year     = new Date().getFullYear();
+  const sequence = await getNextReceiptSequence(year);
+  const padded   = String(sequence).padStart(5, '0');
+  return `RCP-${year}-${padded}`;
+};
+
+const createReceipt = async ({ payment_id, receipt_no, file_path }) => {
+  const [result] = await pool.execute(
+    `INSERT INTO fee_receipts (payment_id, receipt_no, file_path, created_at)
+     VALUES (?, ?, ?, NOW())`,
+    [payment_id, receipt_no, file_path]
+  );
+  return result.insertId;
+};
+
+const findReceiptByPaymentId = async (payment_id) => {
+  const [rows] = await pool.execute(
+    `SELECT * FROM fee_receipts WHERE payment_id = ? LIMIT 1`,
+    [payment_id]
+  );
+  return rows[0] || null;
+};
+
+const updateReceiptSmsStatus = async (payment_id, phone) => {
+  await pool.execute(
+    `UPDATE fee_receipts SET sent_sms = 1, sent_to_phone = ?, sent_at = NOW()
+     WHERE payment_id = ?`,
+    [phone, payment_id]
+  );
+};
+
+const findPrimaryParentByStudentId = async (student_id) => {
+  const [rows] = await pool.execute(
+    `SELECT
+       p.id,
+       p.first_name,
+       p.last_name,
+       p.phone,
+       p.email,
+       ps.relation,
+       ps.is_primary
+     FROM parent_students ps
+     JOIN parents p ON ps.parent_id = p.id
+     WHERE ps.student_id = ?
+     ORDER BY ps.is_primary DESC
+     LIMIT 1`,
+    [student_id]
+  );
+  return rows[0] || null;
+};
+
+const findStudentWithClass = async (student_id) => {
+  const [rows] = await pool.execute(
+    `SELECT
+       s.id,
+       s.student_code,
+       s.first_name,
+       s.last_name,
+       s.email,
+       c.name AS class_name
+     FROM students s
+     LEFT JOIN classes c ON s.class_id = c.id
+     WHERE s.id = ?
+     LIMIT 1`,
+    [student_id]
+  );
+  return rows[0] || null;
+};
+
 module.exports = {
   findAllStructures,
   updateStructure,
@@ -481,4 +574,10 @@ module.exports = {
   updatePayment,
   removePayment,
   findStudentByIdOrName,
+  generateReceiptNumber,
+  createReceipt,
+  findReceiptByPaymentId,
+  updateReceiptSmsStatus,
+  findPrimaryParentByStudentId,
+  findStudentWithClass
 };
