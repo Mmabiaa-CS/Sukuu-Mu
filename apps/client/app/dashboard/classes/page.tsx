@@ -5,6 +5,13 @@ import { useClasses } from '@/lib/use-classes';
 import { ClassFormDialog } from '@/components/class-form-dialog';
 import { Class } from '@/lib/types';
 import { Plus, Search, MoreHorizontal, Trash2, X } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function ClassesPage() {
   const {
@@ -20,29 +27,29 @@ export default function ClassesPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<Class | null>(null);
-  const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const handleAddClass = (data: Omit<Class, 'id' | 'createdAt' | 'created_at' | 'total_students'>) => {
+  const handleAddClass = async (data: Omit<Class, 'id' | 'createdAt' | 'created_at' | 'total_students'>) => {
     setActionError(null);
     try {
-      addClass(data);
+      await addClass(data);
       setIsFormOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to add class:', error);
-      setActionError('Could not create class. Please try again.');
+      setActionError(error?.response?.data?.message || 'Could not create class. Please try again.');
+      throw error;
     }
   };
   const handleEditClass = (cls: Class) => { setEditingClass(cls); setIsFormOpen(true); };
   const handleFormClose = () => { setIsFormOpen(false); setEditingClass(null); };
-  const handleDeleteClass = (id: number) => {
+  const handleDeleteClass = async (id: number) => {
     if (!confirm('Are you sure you want to delete this class?')) return;
     setActionError(null);
     try {
-      deleteClass(id);
-    } catch (error) {
+      await deleteClass(id);
+    } catch (error: any) {
       console.error('Failed to delete class:', error);
-      setActionError('Could not delete class. Please try again.');
+      setActionError(error?.response?.data?.message || 'Could not delete class. Please try again.');
     }
   };
 
@@ -147,16 +154,9 @@ export default function ClassesPage() {
         .cp-enroll-cap { color:#aaa; font-weight:300; }
 
         /* ACTIONS */
-        .cp-actions-wrap { position:relative; display:inline-block; }
         .cp-menu-btn { width:30px; height:30px; border-radius:6px; border:1px solid transparent; background:none; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#bbb; transition:background 0.12s, border-color 0.12s, color 0.12s; }
         .cp-menu-btn:hover { background:#f4f4f3; border-color:#e4e4e2; color:#555; }
-        .cp-dropdown { position:absolute; right:0; top:calc(100% + 6px); background:#fff; border:1px solid #e4e4e2; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.09); min-width:160px; z-index:20; overflow:hidden; animation:cp-drop 0.15s ease; }
-        @keyframes cp-drop { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
-        .cp-dropdown-item { display:flex; align-items:center; gap:9px; padding:10px 14px; font-size:12px; color:#444; cursor:pointer; transition:background 0.1s; border:none; background:none; width:100%; text-align:left; font-family:'DM Sans',sans-serif; }
-        .cp-dropdown-item:hover { background:#f7f7f6; }
-        .cp-dropdown-item.danger { color:#c0392b; }
-        .cp-dropdown-item.danger:hover { background:#fef2f2; }
-        .cp-dropdown-divider { height:1px; background:#f0f0ee; margin:4px 0; }
+        .cp-menu-btn[data-state="open"] { background:#f4f4f3; border-color:#e4e4e2; color:#555; }
 
         .cp-empty { text-align:center; padding:60px 24px; }
         .cp-empty-icon { width:44px; height:44px; border-radius:50%; background:#f4f4f3; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; }
@@ -294,31 +294,25 @@ export default function ClassesPage() {
                           </div>
                         </td>
                         <td>
-                          <div className="cp-actions-wrap">
-                            <button
-                              className="cp-menu-btn"
-                              onClick={() => setActiveMenu(activeMenu === cls.id ? null : cls.id)}
-                            >
-                              <MoreHorizontal size={15} />
-                            </button>
-                            {activeMenu === cls.id && (
-                              <div className="cp-dropdown">
-                                <button
-                                  className="cp-dropdown-item"
-                                  onClick={() => { setActiveMenu(null); handleEditClass(cls); }}
-                                >
-                                  Edit Class
-                                </button>
-                                <div className="cp-dropdown-divider" />
-                                <button
-                                  className="cp-dropdown-item danger"
-                                  onClick={() => { setActiveMenu(null); handleDeleteClass(cls.id); }}
-                                >
-                                  <Trash2 size={13} /> Delete
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="cp-menu-btn">
+                                <MoreHorizontal size={15} />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditClass(cls)}>
+                                Edit Class
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                                onClick={() => handleDeleteClass(cls.id)}
+                              >
+                                <Trash2 size={13} className="mr-2" /> Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     );
@@ -330,22 +324,22 @@ export default function ClassesPage() {
         </div>
       </div>
 
-      {activeMenu && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setActiveMenu(null)} />
-      )}
+
 
       <ClassFormDialog
         isOpen={isFormOpen}
         onClose={handleFormClose}
         onSubmit={editingClass
-          ? (data: Omit<Class, 'id' | 'createdAt' | 'created_at' | 'total_students'>) => {
+          ? async (data: Omit<Class, 'id' | 'createdAt' | 'created_at' | 'total_students'>) => {
             setActionError(null);
             try {
-              updateClass({ id: editingClass.id, updates: data });
+              await updateClass({ id: editingClass.id, updates: data });
               setEditingClass(null);
-            } catch (error) {
+              setIsFormOpen(false);
+            } catch (error: any) {
               console.error('Failed to update class:', error);
-              setActionError('Could not update class. Please try again.');
+              setActionError(error?.response?.data?.message || 'Could not update class. Please try again.');
+              throw error;
             }
           }
           : handleAddClass}

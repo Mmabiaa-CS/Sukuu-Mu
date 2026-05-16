@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { getApiErrorMessage } from '@/lib/api-errors';
 
 interface StudentFormDialogProps {
   isOpen: boolean;
@@ -74,10 +75,18 @@ export function StudentFormDialog({
     }
   }, [initialData, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
-    onClose();
+    setError(null);
+    try {
+      await onSubmit(formData);
+      onClose();
+    } catch (err: any) {
+      console.error(err);
+      setError(getApiErrorMessage(err, 'Action failed. Please try again or check for duplicates.'));
+    }
   };
 
   return (
@@ -93,6 +102,12 @@ export function StudentFormDialog({
               : 'Fill in the details below to add a new student'}
           </DialogDescription>
         </DialogHeader>
+
+        {error && (
+          <div className="p-3 text-sm text-red-800 bg-red-100 border border-red-200 rounded-md">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">

@@ -4,9 +4,19 @@ import { useMemo, useState } from 'react';
 import { useTeachers } from '@/lib/use-teachers';
 import { TeacherFormDialog } from '@/components/teacher-form-dialog';
 import { Teacher } from '@/lib/types';
-import { Plus, Search, MoreHorizontal, Trash2, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Plus, Search, MoreHorizontal, Trash2, X, Eye } from 'lucide-react';
+import { getApiErrorMessage } from '@/lib/api-errors';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function TeachersPage() {
+  const router = useRouter();
   const {
     filteredTeachers,
     searchTerm,
@@ -19,7 +29,6 @@ export default function TeachersPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
-  const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -37,26 +46,27 @@ export default function TeachersPage() {
     inactive: filteredTeachers.filter((t: any) => t.is_active === 0).length,
   }), [filteredTeachers]);
 
-  const handleAddTeacher = (data: Omit<Teacher, 'id'>) => {
+  const handleAddTeacher = async (data: Omit<Teacher, 'id'>) => {
     setActionError(null);
     try {
-      addTeacher(data);
+      await addTeacher(data);
       setIsFormOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to add teacher:', error);
-      setActionError('Could not add teacher. Please try again.');
+      setActionError(getApiErrorMessage(error, 'Could not add teacher. Please try again.'));
+      throw error;
     }
   };
   const handleEditTeacher = (teacher: Teacher) => { setEditingTeacher(teacher); setIsFormOpen(true); };
   const handleFormClose = () => { setIsFormOpen(false); setEditingTeacher(null); };
-  const handleDeleteTeacher = (id: string) => {
+  const handleDeleteTeacher = async (id: number) => {
     if (!confirm('Are you sure you want to delete this teacher?')) return;
     setActionError(null);
     try {
-      deleteTeacher(id);
-    } catch (error) {
+      await deleteTeacher(id);
+    } catch (error: any) {
       console.error('Failed to delete teacher:', error);
-      setActionError('Could not delete teacher. Please try again.');
+      setActionError(getApiErrorMessage(error, 'Could not delete teacher. Please try again.'));
     }
   };
 
@@ -234,36 +244,11 @@ export default function TeachersPage() {
 
         .tp-cell-secondary { color: #aaa; font-weight: 300; }
 
-        .tp-actions-wrap { position: relative; display: inline-block; }
-        .tp-menu-btn {
-          width: 30px; height: 30px; border-radius: 6px;
-          border: 1px solid transparent; background: none;
-          display: flex; align-items: center; justify-content: center;
-          cursor: pointer; color: #bbb;
-          transition: background 0.12s, border-color 0.12s, color 0.12s;
-        }
-        .tp-menu-btn:hover { background: #f4f4f3; border-color: #e4e4e2; color: #555; }
-        .tp-dropdown {
-          position: absolute; right: 0; top: calc(100% + 6px);
-          background: #fff; border: 1px solid #e4e4e2;
-          border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.09);
-          min-width: 160px; z-index: 20; overflow: hidden;
-          animation: tp-drop 0.15s ease;
-        }
-        @keyframes tp-drop { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
-        .tp-dropdown-item {
-          display: flex; align-items: center; gap: 9px;
-          padding: 10px 14px; font-size: 12px; color: #444;
-          cursor: pointer; transition: background 0.1s;
-          border: none; background: none; width: 100%;
-          text-align: left; font-family: 'DM Sans', sans-serif;
-        }
-        .tp-dropdown-item:hover { background: #f7f7f6; }
-        .tp-dropdown-item.danger { color: #c0392b; }
-        .tp-dropdown-item.danger:hover { background: #fef2f2; }
-        .tp-dropdown-divider { height: 1px; background: #f0f0ee; margin: 4px 0; }
+        .tp-menu-btn { width:30px; height:30px; border-radius:6px; border:1px solid transparent; background:none; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#bbb; transition:background 0.12s, border-color 0.12s, color 0.12s; }
+        .tp-menu-btn:hover { background:#f4f4f3; border-color:#e4e4e2; color:#555; }
+        .tp-menu-btn[data-state="open"] { background:#f4f4f3; border-color:#e4e4e2; color:#555; }
 
-        .tp-empty { text-align: center; padding: 60px 24px; }
+        .tp-empty { text-align:center; padding:60px 24px; }
         .tp-empty-icon {
           width: 44px; height: 44px; border-radius: 50%; background: #f4f4f3;
           display: flex; align-items: center; justify-content: center; margin: 0 auto 14px;
@@ -401,31 +386,28 @@ export default function TeachersPage() {
                           </span>
                         </td>
                         <td>
-                          <div className="tp-actions-wrap">
-                            <button
-                              className="tp-menu-btn"
-                              onClick={() => setActiveMenu(activeMenu === teacher.id ? null : teacher.id)}
-                            >
-                              <MoreHorizontal size={15} />
-                            </button>
-                            {activeMenu === teacher.id && (
-                              <div className="tp-dropdown">
-                                <button
-                                  className="tp-dropdown-item"
-                                  onClick={() => { setActiveMenu(null); handleEditTeacher(teacher); }}
-                                >
-                                  Edit Teacher
-                                </button>
-                                <div className="tp-dropdown-divider" />
-                                <button
-                                  className="tp-dropdown-item danger"
-                                  onClick={() => { setActiveMenu(null); handleDeleteTeacher(teacher.id); }}
-                                >
-                                  <Trash2 size={13} /> Delete
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="tp-menu-btn">
+                                <MoreHorizontal size={15} />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => router.push(`/dashboard/teachers/${teacher.id}`)}>
+                                <Eye size={13} className="mr-2" /> View Profile
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEditTeacher(teacher)}>
+                                Edit Teacher
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                                onClick={() => handleDeleteTeacher(teacher.id)}
+                              >
+                                <Trash2 size={13} className="mr-2" /> Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     );
@@ -437,22 +419,22 @@ export default function TeachersPage() {
         </div>
       </div>
 
-      {activeMenu && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setActiveMenu(null)} />
-      )}
+
 
       <TeacherFormDialog
         isOpen={isFormOpen}
         onClose={handleFormClose}
         onSubmit={editingTeacher
-          ? (data: Omit<Teacher, 'id'>) => {
+          ? async (data: Omit<Teacher, 'id'>) => {
             setActionError(null);
             try {
-              updateTeacher(editingTeacher.id, data);
+              await updateTeacher({ id: editingTeacher.id, updates: data });
               setEditingTeacher(null);
+              setIsFormOpen(false);
             } catch (error) {
               console.error('Failed to update teacher:', error);
-              setActionError('Could not update teacher. Please try again.');
+              setActionError(getApiErrorMessage(error, 'Could not update teacher. Please try again.'));
+              throw error;
             }
           }
           : handleAddTeacher}

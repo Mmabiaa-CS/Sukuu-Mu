@@ -56,6 +56,7 @@ export interface Subject {
   name: string;
   code: string;
   description?: string;
+  creditHours?: number;
   created_at?: string;
 }
 

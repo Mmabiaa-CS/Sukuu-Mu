@@ -1,6 +1,7 @@
 'use strict';
 
 const teacherService = require('./teacher.service');
+const { parseIdParam } = require('../../utils/params.util');
 
 const getAllTeachers = async (req, res, next) => {
   try {
@@ -13,7 +14,7 @@ const getAllTeachers = async (req, res, next) => {
 
 const getTeacherById = async (req, res, next) => {
   try {
-    const data = await teacherService.getTeacherById(Number(req.params.id));
+    const data = await teacherService.getTeacherById(parseIdParam(req.params.id, 'teacher id'));
     return res.status(200).json({ success: true, data });
   } catch (err) {
     next(err);
@@ -51,7 +52,7 @@ const createTeacher = async (req, res, next) => {
 
 const updateTeacher = async (req, res, next) => {
   try {
-    const data = await teacherService.updateTeacher(Number(req.params.id), req.body);
+    const data = await teacherService.updateTeacher(parseIdParam(req.params.id, 'teacher id'), req.body);
     return res.status(200).json({
       success: true,
       message: 'Teacher updated successfully.',
@@ -64,7 +65,7 @@ const updateTeacher = async (req, res, next) => {
 
 const deleteTeacher = async (req, res, next) => {
   try {
-    await teacherService.deleteTeacher(Number(req.params.id));
+    await teacherService.deleteTeacher(parseIdParam(req.params.id, 'teacher id'));
     return res.status(200).json({
       success: true,
       message: 'Teacher deleted successfully.',

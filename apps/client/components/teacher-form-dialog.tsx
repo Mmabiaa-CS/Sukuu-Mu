@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Teacher } from '@/lib/types';
 import { useSubjects } from '@/lib/use-subjects';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Eye, EyeOff } from 'lucide-react';
+import { getApiErrorMessage } from '@/lib/api-errors';
 
 interface TeacherFormDialogProps {
   isOpen: boolean;
@@ -52,10 +53,36 @@ export function TeacherFormDialog({
     subjectIds: initialData?.subjectIds || []
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        first_name: initialData?.first_name || '',
+        last_name: initialData?.last_name || '',
+        email: initialData?.email || '',
+        phone: initialData?.phone || '',
+        qualification: initialData?.qualification || '',
+        join_date: initialData?.join_date || new Date().toISOString().split('T')[0],
+        is_active: initialData?.is_active ?? 1,
+        employee_id: initialData?.employee_id || '',
+        password: '',
+        subjectIds: initialData?.subjectIds || []
+      });
+      setError(null);
+    }
+  }, [initialData, isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
-    onClose();
+    setError(null);
+    try {
+      await onSubmit(formData);
+      onClose();
+    } catch (err: any) {
+      console.error(err);
+      setError(getApiErrorMessage(err, 'Action failed. Please try again or check for duplicates.'));
+    }
   };
 
   const toggleSubject = (subjectId: number) => {
@@ -83,6 +110,12 @@ export function TeacherFormDialog({
               : 'Fill in the details below to add a new teacher'}
           </DialogDescription>
         </DialogHeader>
+
+        {error && (
+          <div className="p-3 text-sm text-red-800 bg-red-100 border border-red-200 rounded-md">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">

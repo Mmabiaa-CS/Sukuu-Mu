@@ -1,6 +1,7 @@
 'use strict';
 
 const studentService = require('./student.service');
+const { parseIdParam } = require('../../utils/params.util');
 
 const getAllStudents = async (req, res, next) => {
   try {
@@ -13,7 +14,7 @@ const getAllStudents = async (req, res, next) => {
 
 const getStudentById = async (req, res, next) => {
   try {
-    const data = await studentService.getStudentById(Number(req.params.id));
+    const data = await studentService.getStudentById(parseIdParam(req.params.id, 'student id'));
     return res.status(200).json({ success: true, data });
   } catch (err) {
     next(err);
@@ -60,7 +61,7 @@ const createStudent = async (req, res, next) => {
 
 const updateStudent = async (req, res, next) => {
   try {
-    const data = await studentService.updateStudent(Number(req.params.id), req.body);
+    const data = await studentService.updateStudent(parseIdParam(req.params.id, 'student id'), req.body);
     return res.status(200).json({
       success: true,
       message: 'Student updated successfully.',
@@ -73,7 +74,7 @@ const updateStudent = async (req, res, next) => {
 
 const deleteStudent = async (req, res, next) => {
   try {
-    await studentService.deleteStudent(Number(req.params.id));
+    await studentService.deleteStudent(parseIdParam(req.params.id, 'student id'));
     return res.status(200).json({
       success: true,
       message: 'Student deleted successfully.',

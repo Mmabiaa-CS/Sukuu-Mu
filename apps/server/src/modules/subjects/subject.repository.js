@@ -11,6 +11,7 @@ const findAll = async ({ limit, offset, search }) => {
       name,
       code,
       description,
+      credit_hours,
       is_active,
       created_at,
       updated_at
@@ -56,6 +57,7 @@ const findById = async (id) => {
        name,
        code,
        description,
+       credit_hours,
        is_active,
        created_at,
        updated_at
@@ -92,6 +94,7 @@ const search = async (query) => {
        name,
        code,
        description,
+       credit_hours,
        is_active,
        created_at,
        updated_at
@@ -106,28 +109,36 @@ const search = async (query) => {
   return rows;
 };
 
-const create = async ({ name, code, description }) => {
+const create = async ({ name, code, description, credit_hours, creditHours }) => {
+  const hours = credit_hours ?? creditHours ?? 3;
   const [result] = await pool.execute(
-    `INSERT INTO subjects (name, code, description, is_active, created_at)
-     VALUES (?, ?, ?, 1, NOW())`,
-    [name, code, description ?? null]
+    `INSERT INTO subjects (name, code, description, credit_hours, is_active, created_at)
+     VALUES (?, ?, ?, ?, 1, NOW())`,
+    [name, code, description ?? null, hours]
   );
   return findById(result.insertId);
 };
 
-const update = async (id, { name, code, description, is_active }) => {
+const update = async (id, { name, code, description, credit_hours, creditHours, is_active }) => {
+  const hours =
+    credit_hours !== undefined ? credit_hours
+      : creditHours !== undefined ? creditHours
+        : null;
+
   await pool.execute(
     `UPDATE subjects SET
-       name        = COALESCE(?, name),
-       code        = COALESCE(?, code),
-       description = COALESCE(?, description),
-       is_active   = COALESCE(?, is_active),
-       updated_at  = NOW()
+       name         = COALESCE(?, name),
+       code         = COALESCE(?, code),
+       description  = COALESCE(?, description),
+       credit_hours = COALESCE(?, credit_hours),
+       is_active    = COALESCE(?, is_active),
+       updated_at   = NOW()
      WHERE id = ?`,
     [
       name        !== undefined ? name        : null,
       code        !== undefined ? code        : null,
       description !== undefined ? description : null,
+      hours,
       is_active   !== undefined ? is_active   : null,
       id,
     ]
@@ -258,7 +269,7 @@ const findClassesBySubjectId = async (subject_id) => {
 
 const findByNameOrCode = async ({ name, code }) => {
   let query = `
-    SELECT id, name, code, description, is_active, created_at, updated_at
+    SELECT id, name, code, description, credit_hours, is_active, created_at, updated_at
     FROM subjects
     WHERE 1=1
   `;

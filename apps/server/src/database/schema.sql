@@ -81,6 +81,8 @@ CREATE TABLE IF NOT EXISTS subjects (
   name VARCHAR(100) NOT NULL UNIQUE,
   code VARCHAR(20) NOT NULL UNIQUE,
   description TEXT,
+  credit_hours INT NOT NULL DEFAULT 3,
+  is_active TINYINT(1) DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -212,6 +214,7 @@ SELECT
     c.description, 
     c.is_active, 
     c.created_at,
+    c.updated_at,
     (SELECT COUNT(*) FROM students s WHERE s.class_id = c.id AND s.is_active = 1) AS total_students
 FROM classes c;
 
