@@ -14,6 +14,7 @@ export function useFinances() {
       const response = await apiClient.get('/fees/student-fees');
       return response.data.data || response.data;
     },
+    retry: 1,
   });
 
   // All payments
@@ -23,6 +24,7 @@ export function useFinances() {
       const response = await apiClient.get('/fees');
       return response.data.data || response.data;
     },
+    retry: 1,
   });
 
   // Fee structures
@@ -32,6 +34,7 @@ export function useFinances() {
       const response = await apiClient.get('/fees/structures');
       return response.data.data || response.data;
     },
+    retry: 1,
   });
 
   // Record payment
@@ -54,6 +57,7 @@ export function useFinances() {
       const response = await apiClient.get('/fees/reports/summary');
       return response.data.data;
     },
+    retry: 1,
   });
 
   const getStudentFees = (studentId: string) => {

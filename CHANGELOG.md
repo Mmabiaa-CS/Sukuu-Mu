@@ -27,6 +27,8 @@ All notable changes to the **Sukuu Mu** school management platform will be docum
 
 ### Fixed
 
+- **Finance API 500s**: fee repository SQL aligned with `schema.sql` (removed non-existent `fs.is_active`, `fp.total_fee`, `recorded_by` columns); fee report queries moved into repository (fixes `pool is not defined` in `getFeeReport`); payments now update `student_fees.total_paid` ledger on record.
+- **Teacher form**: gender field added (male / female / other), mapped through existing `teacherToApiPayload`.
 - **Teacher edit** calling `updateTeacher(editingTeacher.id, data)` instead of `updateTeacher({ id, updates })`, which caused `PUT /teachers/undefined` and server `NaN` errors.
 - **Teacher junction SQL**: removed invalid `created_at` inserts and `id` column reads on `teacher_classes` / `teacher_subjects` (composite primary keys only).
 - **Class summary view** / **`updated_at`** column mismatch causing `GET /classes` 500 errors (addressed in schema + patches; see 1.0.0 notes).

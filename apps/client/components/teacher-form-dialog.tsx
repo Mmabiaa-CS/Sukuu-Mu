@@ -51,6 +51,7 @@ export function TeacherFormDialog({
     join_date: initialData?.join_date || new Date().toISOString().split('T')[0],
     is_active: initialData?.is_active ?? 1,
     employee_id: initialData?.employee_id || '',
+    gender: initialData?.gender || '',
     password: '',
     subjectIds: initialData?.subjectIds || [],
     classIds: initialData?.classIds || [],
@@ -69,6 +70,7 @@ export function TeacherFormDialog({
         join_date: initialData?.join_date || new Date().toISOString().split('T')[0],
         is_active: initialData?.is_active ?? 1,
         employee_id: initialData?.employee_id || '',
+        gender: initialData?.gender || '',
         password: '',
         subjectIds: initialData?.subjectIds || [],
         classIds: initialData?.classIds || [],
@@ -188,6 +190,23 @@ export function TeacherFormDialog({
                 setFormData({ ...formData, phone: e.target.value })
               }
             />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Gender</label>
+            <Select
+              value={formData.gender || ''}
+              onValueChange={(value) => setFormData({ ...formData, gender: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1">
