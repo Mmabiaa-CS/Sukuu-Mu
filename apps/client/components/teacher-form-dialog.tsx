@@ -109,6 +109,17 @@ export function TeacherFormDialog({
           </div>
 
           <div className="space-y-1">
+            <label className="text-sm font-medium">Employee ID *</label>
+            <Input
+              value={formData.employee_id || ''}
+              onChange={(e) =>
+                setFormData({ ...formData, employee_id: e.target.value })
+              }
+              required
+            />
+          </div>
+
+          <div className="space-y-1">
             <label className="text-sm font-medium">Email *</label>
             <Input
               type="email"

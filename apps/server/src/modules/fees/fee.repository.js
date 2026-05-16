@@ -66,10 +66,10 @@ const createStructure = async ({
     [
       name,
       total_fee,
-      class_id !== undefined ? class_id : null,
-      term !== undefined ? term : null,
-      academic_year !== undefined ? academic_year : null,
-      description !== undefined ? description : null,
+      class_id !== undefined && class_id !== '' ? class_id : null,
+      term !== undefined && term !== '' ? term : null,
+      academic_year !== undefined && academic_year !== '' ? academic_year : null,
+      description !== undefined && description !== '' ? description : null,
     ]
   );
   return findStructureById(result.insertId);
@@ -88,13 +88,13 @@ const updateStructure = async (id, { name, total_fee, class_id, term, academic_y
        updated_at    = NOW()
      WHERE id = ?`,
     [
-      name !== undefined ? name : null,
-      total_fee !== undefined ? total_fee : null,
-      class_id !== undefined ? class_id : null,
-      term !== undefined ? term : null,
-      academic_year !== undefined ? academic_year : null,
-      description !== undefined ? description : null,
-      is_active !== undefined ? is_active : null,
+      name !== undefined && name !== '' ? name : null,
+      total_fee !== undefined && total_fee !== '' ? total_fee : null,
+      class_id !== undefined && class_id !== '' ? class_id : null,
+      term !== undefined && term !== '' ? term : null,
+      academic_year !== undefined && academic_year !== '' ? academic_year : null,
+      description !== undefined && description !== '' ? description : null,
+      is_active !== undefined && is_active !== '' ? is_active : null,
       id,
     ]
   );

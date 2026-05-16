@@ -43,7 +43,7 @@ const findAll = async ({ limit, offset, search }) => {
 
   query += ` ORDER BY t.created_at DESC`;
 
-  const limitInt  = parseInt(limit, 10);
+  const limitInt = parseInt(limit, 10);
   const offsetInt = parseInt(offset, 10);
   query += ` LIMIT ${limitInt} OFFSET ${offsetInt}`;
 
@@ -133,17 +133,17 @@ const create = async ({
         address, date_of_birth, join_date, qualification, is_active, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())`,
     [
-      user_id       !== undefined ? user_id       : null,
+      user_id !== undefined ? user_id : null,
       employee_id,
       first_name,
       last_name,
       email,
-      phone         !== undefined ? phone         : null,
-      gender        !== undefined ? gender        : null,
-      address       !== undefined ? address       : null,
-      date_of_birth !== undefined ? date_of_birth : null,
-      join_date     !== undefined ? join_date     : null,
-      qualification !== undefined ? qualification : null,
+      phone !== undefined && phone !== '' ? phone : null,
+      gender !== undefined && gender !== '' ? gender : null,
+      address !== undefined && address !== '' ? address : null,
+      date_of_birth !== undefined && date_of_birth !== '' ? date_of_birth : null,
+      join_date !== undefined && join_date !== '' ? join_date : null,
+      qualification !== undefined && qualification !== '' ? qualification : null,
     ]
   );
   return findById(result.insertId);
@@ -168,16 +168,16 @@ const update = async (id, {
        updated_at    = NOW()
      WHERE id = ?`,
     [
-      first_name    !== undefined ? first_name    : null,
-      last_name     !== undefined ? last_name     : null,
-      email         !== undefined ? email         : null,
-      phone         !== undefined ? phone         : null,
-      gender        !== undefined ? gender        : null,
-      address       !== undefined ? address       : null,
-      date_of_birth !== undefined ? date_of_birth : null,
-      join_date     !== undefined ? join_date     : null,
-      qualification !== undefined ? qualification : null,
-      is_active     !== undefined ? is_active     : null,
+      first_name !== undefined ? first_name : null,
+      last_name !== undefined ? last_name : null,
+      email !== undefined ? email : null,
+      phone !== undefined && phone !== '' ? phone : null,
+      gender !== undefined && gender !== '' ? gender : null,
+      address !== undefined && address !== '' ? address : null,
+      date_of_birth !== undefined && date_of_birth !== '' ? date_of_birth : null,
+      join_date !== undefined && join_date !== '' ? join_date : null,
+      qualification !== undefined && qualification !== '' ? qualification : null,
+      is_active !== undefined ? is_active : null,
       id,
     ]
   );
