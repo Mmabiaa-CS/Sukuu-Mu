@@ -262,7 +262,7 @@ const findSubjectByIdNameOrCode = async (value) => {
 
 const findTeacherClass = async (teacher_id, class_id) => {
   const [rows] = await pool.execute(
-    `SELECT id FROM teacher_classes
+    `SELECT teacher_id, class_id FROM teacher_classes
      WHERE teacher_id = ? AND class_id = ? LIMIT 1`,
     [teacher_id, class_id]
   );
@@ -271,11 +271,11 @@ const findTeacherClass = async (teacher_id, class_id) => {
 
 const assignClass = async (teacher_id, class_id) => {
   const [result] = await pool.execute(
-    `INSERT INTO teacher_classes (teacher_id, class_id, created_at)
-     VALUES (?, ?, NOW())`,
+    `INSERT IGNORE INTO teacher_classes (teacher_id, class_id)
+     VALUES (?, ?)`,
     [teacher_id, class_id]
   );
-  return result.insertId;
+  return result.affectedRows;
 };
 
 const removeClassAssignment = async (teacher_id, class_id) => {
@@ -310,7 +310,7 @@ const findClassesByTeacherId = async (teacher_id) => {
 
 const findTeacherSubject = async (teacher_id, subject_id) => {
   const [rows] = await pool.execute(
-    `SELECT id FROM teacher_subjects
+    `SELECT teacher_id, subject_id FROM teacher_subjects
      WHERE teacher_id = ? AND subject_id = ? LIMIT 1`,
     [teacher_id, subject_id]
   );
@@ -319,11 +319,33 @@ const findTeacherSubject = async (teacher_id, subject_id) => {
 
 const assignSubject = async (teacher_id, subject_id) => {
   const [result] = await pool.execute(
-    `INSERT INTO teacher_subjects (teacher_id, subject_id, created_at)
-     VALUES (?, ?, NOW())`,
+    `INSERT IGNORE INTO teacher_subjects (teacher_id, subject_id)
+     VALUES (?, ?)`,
     [teacher_id, subject_id]
   );
-  return result.insertId;
+  return result.affectedRows;
+};
+
+const syncSubjects = async (teacher_id, subjectIds = []) => {
+  await pool.execute('DELETE FROM teacher_subjects WHERE teacher_id = ?', [teacher_id]);
+  const ids = [...new Set(subjectIds.map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+  for (const subject_id of ids) {
+    await pool.execute(
+      'INSERT INTO teacher_subjects (teacher_id, subject_id) VALUES (?, ?)',
+      [teacher_id, subject_id]
+    );
+  }
+};
+
+const syncClasses = async (teacher_id, classIds = []) => {
+  await pool.execute('DELETE FROM teacher_classes WHERE teacher_id = ?', [teacher_id]);
+  const ids = [...new Set(classIds.map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+  for (const class_id of ids) {
+    await pool.execute(
+      'INSERT INTO teacher_classes (teacher_id, class_id) VALUES (?, ?)',
+      [teacher_id, class_id]
+    );
+  }
 };
 
 const removeSubjectAssignment = async (teacher_id, subject_id) => {
@@ -374,4 +396,6 @@ module.exports = {
   assignSubject,
   removeSubjectAssignment,
   findSubjectsByTeacherId,
+  syncSubjects,
+  syncClasses,
 };

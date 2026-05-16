@@ -60,7 +60,9 @@ export function mapStudentFromApi(row: Record<string, unknown>): Student {
     date_of_birth: row.date_of_birth != null ? String(row.date_of_birth) : undefined,
     address: row.address != null ? String(row.address) : undefined,
     class_id: row.class_id != null ? Number(row.class_id) : undefined,
-    enrollment_date: String(row.enrollment_date ?? ''),
+    class_name: row.class_name != null ? String(row.class_name) : undefined,
+    gender: row.gender != null ? String(row.gender) : undefined,
+    enrollment_date: row.enrollment_date != null ? String(row.enrollment_date) : undefined,
     is_active: Number(row.is_active ?? 1),
   };
 }
@@ -77,14 +79,21 @@ export function studentToApiPayload(
   if (student.address !== undefined) payload.address = student.address;
   if (student.class_id !== undefined) payload.class_id = student.class_id;
   if (student.enrollment_date !== undefined) payload.enrollment_date = student.enrollment_date;
+  if (student.gender !== undefined) payload.gender = student.gender;
   if (student.is_active !== undefined) payload.is_active = student.is_active;
   return payload;
 }
 
 export function mapTeacherFromApi(row: Record<string, unknown>): Teacher {
-  const subjects = Array.isArray(row.subjects) ? row.subjects : [];
+  const subjects = Array.isArray(row.subjects) ? row.subjects as Record<string, unknown>[] : [];
+  const classes = Array.isArray(row.classes) ? row.classes as Record<string, unknown>[] : [];
+
   const subjectIds = subjects
-    .map((s: Record<string, unknown>) => Number(s.id ?? s.subject_id))
+    .map((s) => Number(s.id ?? s.subject_id))
+    .filter((id) => Number.isInteger(id) && id > 0);
+
+  const classIds = classes
+    .map((c) => Number(c.id ?? c.class_id))
     .filter((id) => Number.isInteger(id) && id > 0);
 
   return {
@@ -98,7 +107,17 @@ export function mapTeacherFromApi(row: Record<string, unknown>): Teacher {
     qualification: row.qualification != null ? String(row.qualification) : undefined,
     join_date: row.join_date != null ? String(row.join_date) : undefined,
     is_active: Number(row.is_active ?? 1),
-    subjectIds: subjectIds.length ? subjectIds : undefined,
+    subjectIds: subjectIds.length ? subjectIds : [],
+    classIds: classIds.length ? classIds : [],
+    subjects: subjects.map((s) => ({
+      id: Number(s.id ?? s.subject_id),
+      name: String(s.name ?? s.subject_name ?? ''),
+      code: s.code != null ? String(s.code ?? s.subject_code) : undefined,
+    })),
+    classes: classes.map((c) => ({
+      id: Number(c.id ?? c.class_id),
+      name: String(c.name ?? c.class_name ?? ''),
+    })),
   };
 }
 
@@ -116,5 +135,20 @@ export function teacherToApiPayload(
   if (teacher.is_active !== undefined) payload.is_active = teacher.is_active;
   if (teacher.gender !== undefined) payload.gender = teacher.gender;
   if ('password' in teacher && teacher.password) payload.password = teacher.password;
+  if (teacher.subjectIds !== undefined) payload.subject_ids = teacher.subjectIds;
+  if (teacher.classIds !== undefined) payload.class_ids = teacher.classIds;
   return payload;
 }
+
+export type ClassSubjectRow = {
+  subject_id: number;
+  subject_name: string;
+  subject_code?: string;
+  teacher_id?: number;
+  teacher_name?: string;
+};
+
+export type ClassDetail = Class & {
+  subjects?: ClassSubjectRow[];
+  students?: Student[];
+};

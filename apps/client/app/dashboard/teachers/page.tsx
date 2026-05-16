@@ -24,7 +24,6 @@ export default function TeachersPage() {
     addTeacher,
     updateTeacher,
     deleteTeacher,
-    getTeacherSubjects,
   } = useTeachers();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -354,7 +353,7 @@ export default function TeachersPage() {
                 </thead>
                 <tbody>
                   {accessibleTeachers.map((teacher) => {
-                    const subjects = getTeacherSubjects(teacher.subjectIds);
+                    const subjects = teacher.subjects?.map((s) => s.name) ?? [];
                     return (
                       <tr key={teacher.id}>
                         <td>

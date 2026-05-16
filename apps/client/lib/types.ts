@@ -32,7 +32,9 @@ export interface Student {
   date_of_birth?: string;
   address?: string;
   class_id?: number | string;
-  enrollment_date: string;
+  class_name?: string;
+  gender?: string;
+  enrollment_date?: string;
   is_active: number;
 }
 
@@ -74,6 +76,9 @@ export interface Teacher {
   is_active: number;
   password?: string;
   subjectIds?: number[];
+  classIds?: number[];
+  subjects?: { id: number; name: string; code?: string }[];
+  classes?: { id: number; name: string }[];
 }
 
 // Class-Subject assignment

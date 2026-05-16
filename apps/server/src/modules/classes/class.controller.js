@@ -1,6 +1,7 @@
 'use strict';
 
 const classService = require('./class.service');
+const { parseIdParam } = require('../../utils/params.util');
 
 const getAllClasses = async (req, res, next) => {
   try {
@@ -13,7 +14,7 @@ const getAllClasses = async (req, res, next) => {
 
 const getClassById = async (req, res, next) => {
   try {
-    const data = await classService.getClassById(Number(req.params.id));
+    const data = await classService.getClassById(parseIdParam(req.params.id, 'class id'));
     return res.status(200).json({ success: true, data });
   } catch (err) {
     next(err);
@@ -22,7 +23,7 @@ const getClassById = async (req, res, next) => {
 
 const getStudentsByClass = async (req, res, next) => {
   try {
-    const data = await classService.getStudentsByClass(Number(req.params.id));
+    const data = await classService.getStudentsByClass(parseIdParam(req.params.id, 'class id'));
     return res.status(200).json({ success: true, data });
   } catch (err) {
     next(err);
@@ -44,7 +45,7 @@ const createClass = async (req, res, next) => {
 
 const updateClass = async (req, res, next) => {
   try {
-    const data = await classService.updateClass(Number(req.params.id), req.body);
+    const data = await classService.updateClass(parseIdParam(req.params.id, 'class id'), req.body);
     return res.status(200).json({
       success: true,
       message: 'Class updated successfully.',
@@ -57,7 +58,7 @@ const updateClass = async (req, res, next) => {
 
 const deleteClass = async (req, res, next) => {
   try {
-    await classService.deleteClass(Number(req.params.id));
+    await classService.deleteClass(parseIdParam(req.params.id, 'class id'));
     return res.status(200).json({
       success: true,
       message: 'Class deleted successfully.',
@@ -69,7 +70,7 @@ const deleteClass = async (req, res, next) => {
 
 const migrateStudents = async (req, res, next) => {
   try {
-    const fromClassId = Number(req.params.id);
+    const fromClassId = parseIdParam(req.params.id, 'class id');
     const { to_class_id } = req.body;
 
     if (!to_class_id) {

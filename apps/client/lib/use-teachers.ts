@@ -76,10 +76,6 @@ export function useTeachers() {
     addTeacher: addTeacherMutation.mutateAsync,
     updateTeacher: updateTeacherMutation.mutateAsync,
     deleteTeacher: deleteTeacherMutation.mutateAsync,
-    getTeacherSubjects: (subjectIds?: number[]) => {
-      if (!subjectIds?.length) return [];
-      return subjectIds.map((id) => `Subject #${id}`);
-    },
   };
 }
 

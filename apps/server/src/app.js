@@ -17,7 +17,6 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (curl, Postman, server-to-server)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
     const err = new Error(`CORS: Origin "${origin}" not allowed`);
@@ -29,63 +28,47 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Handle preflight for all routes
 app.options('*', cors());
 
-// ── Security & parsing middleware ─────────────────────────────────────────────
+// ── Security & parsing ────────────────────────────────────────────────────────
 app.use(helmet({
-  crossOriginResourcePolicy: false, // let CORS headers through
+  crossOriginResourcePolicy: false,
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ── API Documentation ──────────────────────────────────────────────────────
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(specs));
-
-// At the top with other requires
+// ── Request logging (before routes so every API call is logged) ───────────────
 const { logger } = require('./middleware/logger.middleware');
 const { errorHandler } = require('./middleware/error.middleware');
-const authRoutes = require('./modules/auth/auth.routes');
 
-//parents routes
-const parentRoutes = require('./modules/parents/parent.routes');
-app.use('/api/v1/parents', parentRoutes);
-
-//fees routes
-const feeRoutes = require('./modules/fees/fee.routes');
-app.use('/api/v1/fees', feeRoutes);
-
-//teachers routes
-const teacherRoutes = require('./modules/teachers/teacher.routes');
-app.use('/api/v1/teachers', teacherRoutes);
-
-//subjects routes
-const subjectRoutes = require('./modules/subjects/subject.routes');
-app.use('/api/v1/subjects', subjectRoutes);
-
-//classes routes 
-const classRoutes = require('./modules/classes/class.routes');
-app.use('/api/v1/classes', classRoutes);
-
-
-//students routes 
-const studentRoutes = require('./modules/students/student.routes');
-app.use('/api/v1/students', studentRoutes);
-
-//attendance routes
-const attendanceRoutes = require('./modules/attendance/attendance.routes');
-app.use('/api/v1/attendance', attendanceRoutes);
-
-// After your middleware block, before the 404 handler
-app.use('/api/v1/auth', authRoutes);
-
-// ── HTTP request logger ────────────────────────────────────────────────────
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 app.use(logger);
 
-// ── Health check ───────────────────────────────────────────────────────────
+// ── API Documentation ────────────────────────────────────────────────────────
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(specs));
+
+// ── Routes ───────────────────────────────────────────────────────────────────
+const authRoutes = require('./modules/auth/auth.routes');
+const parentRoutes = require('./modules/parents/parent.routes');
+const feeRoutes = require('./modules/fees/fee.routes');
+const teacherRoutes = require('./modules/teachers/teacher.routes');
+const subjectRoutes = require('./modules/subjects/subject.routes');
+const classRoutes = require('./modules/classes/class.routes');
+const studentRoutes = require('./modules/students/student.routes');
+const attendanceRoutes = require('./modules/attendance/attendance.routes');
+
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/parents', parentRoutes);
+app.use('/api/v1/fees', feeRoutes);
+app.use('/api/v1/teachers', teacherRoutes);
+app.use('/api/v1/subjects', subjectRoutes);
+app.use('/api/v1/classes', classRoutes);
+app.use('/api/v1/students', studentRoutes);
+app.use('/api/v1/attendance', attendanceRoutes);
+
+// ── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
@@ -94,7 +77,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// ── 404 handler ────────────────────────────────────────────────────────────
+// ── 404 handler ────────────────────────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -102,6 +85,7 @@ app.use((req, res) => {
   });
 });
 
-// ── Global error handler ───────────────────────────────────────────────────
+// ── Global error handler ───────────────────────────────────────────────────────
 app.use(errorHandler);
+
 module.exports = app;

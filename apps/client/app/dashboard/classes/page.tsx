@@ -1,10 +1,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useClasses } from '@/lib/use-classes';
 import { ClassFormDialog } from '@/components/class-form-dialog';
 import { Class } from '@/lib/types';
-import { Plus, Search, MoreHorizontal, Trash2, X } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Trash2, X, Eye } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export default function ClassesPage() {
+  const router = useRouter();
   const {
     filteredClasses,
     searchTerm,
@@ -301,6 +303,9 @@ export default function ClassesPage() {
                               </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => router.push(`/dashboard/classes/${cls.id}`)}>
+                                <Eye size={13} className="mr-2" /> View class
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleEditClass(cls)}>
                                 Edit Class
                               </DropdownMenuItem>

@@ -4,6 +4,20 @@ const teacherRepository = require('./teacher.repository');
 const authRepository = require('../auth/auth.repository');
 const { hashPassword } = require('../../utils/hash.util');
 
+const normalizeIds = (value) => {
+  if (value === undefined || value === null) return [];
+  const list = Array.isArray(value) ? value : [value];
+  return [...new Set(list.map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+};
+
+const enrichTeacher = async (teacher) => {
+  const [subjects, classes] = await Promise.all([
+    teacherRepository.findSubjectsByTeacherId(teacher.id),
+    teacherRepository.findClassesByTeacherId(teacher.id),
+  ]);
+  return { ...teacher, subjects, classes };
+};
+
 // ── Get all teachers ───────────────────────────────────────────────────────
 const getAllTeachers = async (query) => {
   const page = Math.max(parseInt(query.page) || 1, 1);
@@ -16,8 +30,10 @@ const getAllTeachers = async (query) => {
     teacherRepository.countAll({ search }),
   ]);
 
+  const data = await Promise.all(teachers.map(enrichTeacher));
+
   return {
-    data: teachers,
+    data,
     pagination: {
       total,
       page,
@@ -36,12 +52,7 @@ const getTeacherById = async (id) => {
     throw err;
   }
 
-  const [classes, subjects] = await Promise.all([
-    teacherRepository.findClassesByTeacherId(id),
-    teacherRepository.findSubjectsByTeacherId(id),
-  ]);
-
-  return { ...teacher, classes, subjects };
+  return enrichTeacher(teacher);
 };
 
 // ── Search teachers ────────────────────────────────────────────────────────
@@ -131,7 +142,15 @@ const createTeacher = async (body) => {
   }
 
   const finalBody = { ...body, user_id: createdUserId };
-  return teacherRepository.create(finalBody);
+  const created = await teacherRepository.create(finalBody);
+
+  const subjectIds = normalizeIds(body.subject_ids ?? body.subjectIds);
+  const classIds = normalizeIds(body.class_ids ?? body.classIds);
+
+  if (subjectIds.length) await teacherRepository.syncSubjects(created.id, subjectIds);
+  if (classIds.length) await teacherRepository.syncClasses(created.id, classIds);
+
+  return enrichTeacher(created);
 };
 
 // ── Update teacher ─────────────────────────────────────────────────────────
@@ -152,7 +171,16 @@ const updateTeacher = async (id, body) => {
     }
   }
 
-  return teacherRepository.update(id, body);
+  const updated = await teacherRepository.update(id, body);
+
+  if (body.subject_ids !== undefined || body.subjectIds !== undefined) {
+    await teacherRepository.syncSubjects(id, normalizeIds(body.subject_ids ?? body.subjectIds));
+  }
+  if (body.class_ids !== undefined || body.classIds !== undefined) {
+    await teacherRepository.syncClasses(id, normalizeIds(body.class_ids ?? body.classIds));
+  }
+
+  return enrichTeacher(updated);
 };
 
 // ── Delete teacher ─────────────────────────────────────────────────────────

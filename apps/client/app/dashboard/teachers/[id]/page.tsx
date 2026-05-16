@@ -69,7 +69,16 @@ export default function TeacherProfilePage() {
         { label: 'Phone', value: teacher.phone },
         { label: 'Qualification', value: teacher.qualification },
         { label: 'Join date', value: formatDate(teacher.join_date) },
-        { label: 'Subjects', value: subjectNames.length ? subjectNames.join(', ') : '—' },
+        {
+          label: 'Subjects',
+          value: subjectNames.length ? subjectNames.join(', ') : '—',
+        },
+        {
+          label: 'Classes',
+          value: teacher.classes?.length
+            ? teacher.classes.map((c) => c.name).join(', ')
+            : '—',
+        },
         { label: 'Gender', value: teacher.gender },
         { label: 'System ID', value: String(teacher.id) },
       ]}

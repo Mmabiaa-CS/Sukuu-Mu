@@ -42,6 +42,8 @@ export function useFinances() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['student-fees'] });
+      queryClient.invalidateQueries({ queryKey: ['fee-report'] });
     },
   });
 

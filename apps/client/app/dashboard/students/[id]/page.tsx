@@ -69,6 +69,7 @@ export default function StudentProfilePage() {
         { label: 'Email', value: student.email },
         { label: 'Phone', value: student.phone },
         { label: 'Class', value: studentClass?.name ?? (student.class_id ? `Class #${student.class_id}` : '—') },
+        { label: 'Gender', value: student.gender },
         { label: 'Date of birth', value: formatDate(student.date_of_birth) },
         { label: 'Enrollment date', value: formatDate(student.enrollment_date) },
         { label: 'Address', value: student.address },

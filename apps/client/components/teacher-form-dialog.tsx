@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Teacher } from '@/lib/types';
 import { useSubjects } from '@/lib/use-subjects';
+import { useClasses } from '@/lib/use-classes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -39,6 +40,7 @@ export function TeacherFormDialog({
   isEditing = false
 }: TeacherFormDialogProps) {
   const { subjects } = useSubjects();
+  const { classes } = useClasses();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState<Omit<Teacher, 'id'>>({
     first_name: initialData?.first_name || '',
@@ -50,7 +52,8 @@ export function TeacherFormDialog({
     is_active: initialData?.is_active ?? 1,
     employee_id: initialData?.employee_id || '',
     password: '',
-    subjectIds: initialData?.subjectIds || []
+    subjectIds: initialData?.subjectIds || [],
+    classIds: initialData?.classIds || [],
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +70,8 @@ export function TeacherFormDialog({
         is_active: initialData?.is_active ?? 1,
         employee_id: initialData?.employee_id || '',
         password: '',
-        subjectIds: initialData?.subjectIds || []
+        subjectIds: initialData?.subjectIds || [],
+        classIds: initialData?.classIds || [],
       });
       setError(null);
     }
@@ -92,7 +96,19 @@ export function TeacherFormDialog({
         ...prev,
         subjectIds: currentIds.includes(subjectId)
           ? currentIds.filter((id) => id !== subjectId)
-          : [...currentIds, subjectId]
+          : [...currentIds, subjectId],
+      };
+    });
+  };
+
+  const toggleClass = (classId: number) => {
+    setFormData((prev) => {
+      const currentIds = prev.classIds || [];
+      return {
+        ...prev,
+        classIds: currentIds.includes(classId)
+          ? currentIds.filter((id) => id !== classId)
+          : [...currentIds, classId],
       };
     });
   };
@@ -195,6 +211,23 @@ export function TeacherFormDialog({
               }
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Assigned classes</label>
+            <div className="space-y-2 max-h-40 overflow-y-auto border border-input rounded-md p-3">
+              {classes.map((cls) => (
+                <label key={cls.id} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.classIds?.includes(cls.id)}
+                    onChange={() => toggleClass(cls.id)}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm">{cls.name}</span>
+                </label>
+              ))}
+            </div>
           </div>
 
           <div className="space-y-2">
