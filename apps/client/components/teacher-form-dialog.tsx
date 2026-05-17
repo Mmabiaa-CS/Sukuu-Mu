@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Teacher } from '@/lib/types';
 import { useSubjects } from '@/lib/use-subjects';
+import { useClasses } from '@/lib/use-classes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -21,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Eye, EyeOff } from 'lucide-react';
+import { getApiErrorMessage } from '@/lib/api-errors';
 
 interface TeacherFormDialogProps {
   isOpen: boolean;
@@ -38,6 +40,7 @@ export function TeacherFormDialog({
   isEditing = false
 }: TeacherFormDialogProps) {
   const { subjects } = useSubjects();
+  const { classes } = useClasses();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState<Omit<Teacher, 'id'>>({
     first_name: initialData?.first_name || '',
@@ -48,14 +51,44 @@ export function TeacherFormDialog({
     join_date: initialData?.join_date || new Date().toISOString().split('T')[0],
     is_active: initialData?.is_active ?? 1,
     employee_id: initialData?.employee_id || '',
+    gender: initialData?.gender || '',
     password: '',
-    subjectIds: initialData?.subjectIds || []
+    subjectIds: initialData?.subjectIds || [],
+    classIds: initialData?.classIds || [],
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        first_name: initialData?.first_name || '',
+        last_name: initialData?.last_name || '',
+        email: initialData?.email || '',
+        phone: initialData?.phone || '',
+        qualification: initialData?.qualification || '',
+        join_date: initialData?.join_date || new Date().toISOString().split('T')[0],
+        is_active: initialData?.is_active ?? 1,
+        employee_id: initialData?.employee_id || '',
+        gender: initialData?.gender || '',
+        password: '',
+        subjectIds: initialData?.subjectIds || [],
+        classIds: initialData?.classIds || [],
+      });
+      setError(null);
+    }
+  }, [initialData, isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
-    onClose();
+    setError(null);
+    try {
+      await onSubmit(formData);
+      onClose();
+    } catch (err: any) {
+      console.error(err);
+      setError(getApiErrorMessage(err, 'Action failed. Please try again or check for duplicates.'));
+    }
   };
 
   const toggleSubject = (subjectId: number) => {
@@ -65,7 +98,19 @@ export function TeacherFormDialog({
         ...prev,
         subjectIds: currentIds.includes(subjectId)
           ? currentIds.filter((id) => id !== subjectId)
-          : [...currentIds, subjectId]
+          : [...currentIds, subjectId],
+      };
+    });
+  };
+
+  const toggleClass = (classId: number) => {
+    setFormData((prev) => {
+      const currentIds = prev.classIds || [];
+      return {
+        ...prev,
+        classIds: currentIds.includes(classId)
+          ? currentIds.filter((id) => id !== classId)
+          : [...currentIds, classId],
       };
     });
   };
@@ -83,6 +128,12 @@ export function TeacherFormDialog({
               : 'Fill in the details below to add a new teacher'}
           </DialogDescription>
         </DialogHeader>
+
+        {error && (
+          <div className="p-3 text-sm text-red-800 bg-red-100 border border-red-200 rounded-md">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
@@ -109,6 +160,17 @@ export function TeacherFormDialog({
           </div>
 
           <div className="space-y-1">
+            <label className="text-sm font-medium">Employee ID *</label>
+            <Input
+              value={formData.employee_id || ''}
+              onChange={(e) =>
+                setFormData({ ...formData, employee_id: e.target.value })
+              }
+              required
+            />
+          </div>
+
+          <div className="space-y-1">
             <label className="text-sm font-medium">Email *</label>
             <Input
               type="email"
@@ -128,6 +190,23 @@ export function TeacherFormDialog({
                 setFormData({ ...formData, phone: e.target.value })
               }
             />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Gender</label>
+            <Select
+              value={formData.gender || ''}
+              onValueChange={(value) => setFormData({ ...formData, gender: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1">
@@ -151,6 +230,23 @@ export function TeacherFormDialog({
               }
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Assigned classes</label>
+            <div className="space-y-2 max-h-40 overflow-y-auto border border-input rounded-md p-3">
+              {classes.map((cls) => (
+                <label key={cls.id} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.classIds?.includes(cls.id)}
+                    onChange={() => toggleClass(cls.id)}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm">{cls.name}</span>
+                </label>
+              ))}
+            </div>
           </div>
 
           <div className="space-y-2">

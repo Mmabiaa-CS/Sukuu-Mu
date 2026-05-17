@@ -4,7 +4,9 @@ import { useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useFinances } from '@/lib/use-finances';
 import { canManageFinances } from '@/lib/permissions';
-import { AlertCircle, DollarSign, CheckCircle, Clock, Users, Search, X } from 'lucide-react';
+import { AlertCircle, DollarSign, CheckCircle, Clock, Users, Search, X, Plus } from 'lucide-react';
+import { PaymentRecordDialog } from '@/components/payment-record-dialog';
+import { getApiErrorMessage } from '@/lib/api-errors';
 
 export default function FinancesPage() {
   const { user } = useAuth();
@@ -12,6 +14,7 @@ export default function FinancesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentDialogFee, setPaymentDialogFee] = useState<any | null>(null);
+  const [showRecordPayment, setShowRecordPayment] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
     amount: '',
     paymentMethod: 'cash' as const,
@@ -70,7 +73,7 @@ export default function FinancesPage() {
       setPaymentDialogFee(null);
     } catch (error) {
       console.error('Payment failed:', error);
-      alert('Failed to record payment');
+      alert(getApiErrorMessage(error, 'Failed to record payment'));
     }
   };
 
@@ -176,6 +179,26 @@ export default function FinancesPage() {
             <h1 className="fp-title">Finances</h1>
             <p className="fp-sub">Track student fees, payments, and outstanding balances</p>
           </div>
+          <button
+            type="button"
+            className="fp-add-btn"
+            onClick={() => setShowRecordPayment(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '12px 22px',
+              background: '#0a0a0a',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            <Plus size={15} /> Record payment
+          </button>
         </div>
 
         <div className="fp-stats">
@@ -319,9 +342,10 @@ export default function FinancesPage() {
                   onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value as any })}
                 >
                   <option value="cash">Cash</option>
-                  <option value="check">Check</option>
-                  <option value="transfer">Bank Transfer</option>
-                  <option value="online">Online</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="mobile_money">Mobile Money</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
               <div className="fp-field">
@@ -338,6 +362,12 @@ export default function FinancesPage() {
           </div>
         </div>
       )}
+
+      <PaymentRecordDialog
+        isOpen={showRecordPayment}
+        onClose={() => setShowRecordPayment(false)}
+        preselectedStudentId={paymentDialogFee?.student_id}
+      />
     </>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Class } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { getApiErrorMessage } from '@/lib/api-errors';
 
 interface ClassFormDialogProps {
   isOpen: boolean;
@@ -45,10 +46,33 @@ export function ClassFormDialog({
     is_active: initialData?.is_active ?? 1
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        name: initialData?.name || '',
+        code: initialData?.code || '',
+        description: initialData?.description || '',
+        level: initialData?.level || 1,
+        academicYear: initialData?.academicYear || '2024-2025',
+        capacity: initialData?.capacity || 40,
+        is_active: initialData?.is_active ?? 1
+      });
+      setError(null);
+    }
+  }, [initialData, isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
-    onClose();
+    setError(null);
+    try {
+      await onSubmit(formData);
+      onClose();
+    } catch (err: any) {
+      console.error(err);
+      setError(getApiErrorMessage(err, 'Action failed. Please try again or check for duplicates.'));
+    }
   };
 
   return (
@@ -64,6 +88,12 @@ export function ClassFormDialog({
               : 'Fill in the details below to create a new class'}
           </DialogDescription>
         </DialogHeader>
+
+        {error && (
+          <div className="p-3 text-sm text-red-800 bg-red-100 border border-red-200 rounded-md">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
@@ -126,9 +156,9 @@ export function ClassFormDialog({
                 type="number"
                 min="1"
                 max="100"
-                value={formData.capacity}
+                value={Number.isNaN(formData.capacity) ? '' : formData.capacity}
                 onChange={(e) =>
-                  setFormData({ ...formData, capacity: parseInt(e.target.value) })
+                  setFormData({ ...formData, capacity: e.target.value ? parseInt(e.target.value) : 0 })
                 }
                 required
               />

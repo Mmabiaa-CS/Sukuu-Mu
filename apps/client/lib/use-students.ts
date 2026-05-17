@@ -4,49 +4,52 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from './api-client';
 import { Student } from './types';
 import { useState } from 'react';
+import { mapStudentFromApi, studentToApiPayload } from './api-mappers';
+import { unwrapListPayload } from './api-errors';
 
 export function useStudents() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Fetch all students (with search)
   const { data: students = [], isLoading, error } = useQuery<Student[]>({
     queryKey: ['students', searchTerm],
     queryFn: async () => {
       const response = await apiClient.get(
-        searchTerm ? `/students/search?q=${searchTerm}` : '/students'
+        searchTerm ? `/students/search?q=${encodeURIComponent(searchTerm)}` : '/students',
+        searchTerm ? undefined : { params: { limit: 100 } }
       );
-      // Backend returns { success: true, data: [...], pagination: {...} } or [ ... ] depending on endpoint
-      // Adjust based on backend implementation: /students returns { data: [] }
-      return response.data.data || response.data;
+      const rows = searchTerm
+        ? unwrapListPayload<Record<string, unknown>>(response.data)
+        : unwrapListPayload<Record<string, unknown>>(response.data);
+      return rows.map(mapStudentFromApi);
     },
   });
 
-  // Create student
   const addStudentMutation = useMutation({
     mutationFn: async (newStudent: Omit<Student, 'id' | 'student_code'>) => {
-      const response = await apiClient.post('/students', newStudent);
-      return response.data.data;
+      const response = await apiClient.post('/students', studentToApiPayload(newStudent));
+      return mapStudentFromApi(response.data.data ?? response.data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
     },
   });
 
-  // Update student
   const updateStudentMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: Partial<Student> }) => {
-      const response = await apiClient.put(`/students/${id}`, updates);
-      return response.data.data;
+      if (!id || Number.isNaN(id)) throw new Error('Invalid student id');
+      const response = await apiClient.put(`/students/${id}`, studentToApiPayload(updates));
+      return mapStudentFromApi(response.data.data ?? response.data);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['students', variables.id] });
     },
   });
 
-  // Delete student
   const deleteStudentMutation = useMutation({
     mutationFn: async (id: number) => {
+      if (!id || Number.isNaN(id)) throw new Error('Invalid student id');
       await apiClient.delete(`/students/${id}`);
     },
     onSuccess: () => {
@@ -66,15 +69,11 @@ export function useStudents() {
     isAdding: addStudentMutation.isPending,
     isUpdating: updateStudentMutation.isPending,
     getStudentById: (id: string | number) => {
-      // In a real app we'd use useQuery here, but for brevity in this hook context:
-      return students.find(s => s.id === parseInt(id.toString()));
+      const numericId = Number(id);
+      return students.find((s) => s.id === numericId);
     },
     isDeleting: deleteStudentMutation.isPending,
-    // Compatibility helpers
     filteredStudents: students,
-    getClassName: (classId: number | string) => {
-      // Placeholder for now, ideally fetch from useClasses
-      return `Class ${classId}`;
-    }
+    getClassName: (classId: number | string) => `Class ${classId}`,
   };
 }

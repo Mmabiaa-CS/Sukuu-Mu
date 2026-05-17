@@ -5,10 +5,19 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Student } from '@/lib/types';
 import { useStudents } from '@/lib/use-students';
+import { apiClient } from '@/lib/api-client';
+import { mapStudentFromApi } from '@/lib/api-mappers';
 import { StudentFormDialog } from '@/components/student-form-dialog';
 import { canManageStudents, filterStudentsByAccess } from '@/lib/permissions';
 import { useClasses } from '@/lib/use-classes';
 import { Plus, Search, MoreHorizontal, Trash2, Eye, SlidersHorizontal, X } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function StudentsPage() {
   const { user } = useAuth();
@@ -31,7 +40,6 @@ export default function StudentsPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<any>(null);
-  const [activeMenu, setActiveMenu] = useState<number | string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const accessibleStudents = useMemo(() => {
@@ -42,11 +50,40 @@ export default function StudentsPage() {
 
   const canAdd = canManageStudents(user);
 
-  const handleAddStudent = (data: any) => { addStudent(data); setIsFormOpen(false); };
-  const handleEditStudent = (student: Student) => { setEditingStudent(student); setIsFormOpen(true); };
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const handleAddStudent = async (data: any) => {
+    setActionError(null);
+    try {
+      await addStudent(data);
+      setIsFormOpen(false);
+    } catch (error: any) {
+      console.error('Failed to add student:', error);
+      setActionError(error?.response?.data?.message || 'Could not add student. Please try again.');
+      throw error;
+    }
+  };
+  const handleEditStudent = async (student: Student) => {
+    setActionError(null);
+    try {
+      const response = await apiClient.get(`/students/${student.id}`);
+      const row = response.data?.data ?? response.data;
+      setEditingStudent(mapStudentFromApi(row as Record<string, unknown>));
+    } catch {
+      setEditingStudent(student);
+    }
+    setIsFormOpen(true);
+  };
   const handleFormClose = () => { setIsFormOpen(false); setEditingStudent(null); };
-  const handleDeleteStudent = (id: number) => {
-    if (confirm('Are you sure you want to delete this student?')) deleteStudent(id);
+  const handleDeleteStudent = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this student?')) return;
+    setActionError(null);
+    try {
+      await deleteStudent(id);
+    } catch (error: any) {
+      console.error('Failed to delete student:', error);
+      setActionError(error?.response?.data?.message || 'Could not delete student. Please try again.');
+    }
   };
 
   const initials = (s: Student) =>
@@ -336,59 +373,10 @@ export default function StudentsPage() {
         /* CELL SECONDARY */
         .sp-cell-secondary { color: #aaa; font-weight: 300; }
 
-        /* ACTION MENU */
-        .sp-actions-wrap { position: relative; display: inline-block; }
-        .sp-menu-btn {
-          width: 30px;
-          height: 30px;
-          border-radius: 6px;
-          border: 1px solid transparent;
-          background: none;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          color: #bbb;
-          transition: background 0.12s, border-color 0.12s, color 0.12s;
-        }
-        .sp-menu-btn:hover {
-          background: #f4f4f3;
-          border-color: #e4e4e2;
-          color: #555;
-        }
-        .sp-dropdown {
-          position: absolute;
-          right: 0;
-          top: calc(100% + 6px);
-          background: #ffffff;
-          border: 1px solid #e4e4e2;
-          border-radius: 8px;
-          box-shadow: 0 8px 24px rgba(0,0,0,0.09);
-          min-width: 160px;
-          z-index: 20;
-          overflow: hidden;
-          animation: sp-drop 0.15s ease;
-        }
-        @keyframes sp-drop { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
-        .sp-dropdown-item {
-          display: flex;
-          align-items: center;
-          gap: 9px;
-          padding: 10px 14px;
-          font-size: 12px;
-          color: #444;
-          cursor: pointer;
-          transition: background 0.1s;
-          border: none;
-          background: none;
-          width: 100%;
-          text-align: left;
-          font-family: 'DM Sans', sans-serif;
-        }
-        .sp-dropdown-item:hover { background: #f7f7f6; }
-        .sp-dropdown-item.danger { color: #c0392b; }
-        .sp-dropdown-item.danger:hover { background: #fef2f2; }
-        .sp-dropdown-divider { height: 1px; background: #f0f0ee; margin: 4px 0; }
+        /* ACTIONS */
+        .sp-menu-btn { width:30px; height:30px; border-radius:6px; border:1px solid transparent; background:none; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#bbb; transition:background 0.12s, border-color 0.12s, color 0.12s; }
+        .sp-menu-btn:hover { background:#f4f4f3; border-color:#e4e4e2; color:#555; }
+        .sp-menu-btn[data-state="open"] { background:#f4f4f3; border-color:#e4e4e2; color:#555; }
 
         /* EMPTY STATE */
         .sp-empty {
@@ -433,6 +421,22 @@ export default function StudentsPage() {
         </div>
 
         {/* TOOLBAR */}
+        {actionError && (
+          <div
+            role="alert"
+            style={{
+              marginBottom: '12px',
+              border: '1px solid #f5c2c7',
+              background: '#fef2f2',
+              color: '#7f1d1d',
+              borderRadius: '8px',
+              padding: '10px 12px',
+              fontSize: '13px',
+            }}
+          >
+            {actionError}
+          </div>
+        )}
         <div className="sp-toolbar">
           <div className="sp-search-wrap">
             <Search size={14} className="sp-search-icon" />
@@ -519,44 +523,33 @@ export default function StudentsPage() {
                         </span>
                       </td>
                       <td>
-                        <div className="sp-actions-wrap">
-                          <button
-                            className="sp-menu-btn"
-                            onClick={() => setActiveMenu(String(activeMenu) === String(student.id) ? null : student.id)}
-                          >
-                            <MoreHorizontal size={15} />
-                          </button>
-                          {String(activeMenu) === String(student.id) && (
-                            <div className="sp-dropdown">
-                              <button
-                                className="sp-dropdown-item"
-                                onClick={() => {
-                                  setActiveMenu(null);
-                                  router.push(`/dashboard/students/${student.id}`);
-                                }}
-                              >
-                                <Eye size={13} /> View Profile
-                              </button>
-                              {canManageStudents(user) && (
-                                <>
-                                  <button
-                                    className="sp-dropdown-item"
-                                    onClick={() => { setActiveMenu(null); handleEditStudent(student); }}
-                                  >
-                                    <Plus size={13} /> Edit Student
-                                  </button>
-                                  <div className="sp-dropdown-divider" />
-                                  <button
-                                    className="sp-dropdown-item danger"
-                                    onClick={() => { setActiveMenu(null); handleDeleteStudent(student.id); }}
-                                  >
-                                    <Trash2 size={13} /> Delete
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="sp-menu-btn">
+                              <MoreHorizontal size={15} />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => router.push(`/dashboard/students/${student.id}`)}>
+                              <Eye size={13} className="mr-2" /> View Profile
+                            </DropdownMenuItem>
+                            {canManageStudents(user) && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleEditStudent(student)}>
+                                  Edit Student
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                                  onClick={() => handleDeleteStudent(student.id)}
+                                >
+                                  <Trash2 size={13} className="mr-2" /> Delete
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))}
@@ -568,19 +561,22 @@ export default function StudentsPage() {
 
       </div>
 
-      {/* Click outside to close menu */}
-      {activeMenu && (
-        <div
-          style={{ position: 'fixed', inset: 0, zIndex: 10 }}
-          onClick={() => setActiveMenu(null)}
-        />
-      )}
-
       <StudentFormDialog
         isOpen={isFormOpen}
         onClose={handleFormClose}
         onSubmit={editingStudent
-          ? (data) => { updateStudent({ id: editingStudent.id, updates: data }); setEditingStudent(null); }
+          ? async (data) => {
+            setActionError(null);
+            try {
+              await updateStudent({ id: editingStudent.id, updates: data });
+              setEditingStudent(null);
+              setIsFormOpen(false);
+            } catch (error: any) {
+              console.error('Failed to update student:', error);
+              setActionError(error?.response?.data?.message || 'Could not update student. Please try again.');
+              throw error;
+            }
+          }
           : handleAddStudent}
         initialData={editingStudent}
         isEditing={!!editingStudent}

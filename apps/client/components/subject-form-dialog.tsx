@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Subject } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { getApiErrorMessage } from '@/lib/api-errors';
 
 interface SubjectFormDialogProps {
   isOpen: boolean;
@@ -35,10 +36,30 @@ export function SubjectFormDialog({
     creditHours: initialData?.creditHours || 3
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        name: initialData?.name || '',
+        code: initialData?.code || '',
+        description: initialData?.description || '',
+        creditHours: initialData?.creditHours || 3
+      });
+      setError(null);
+    }
+  }, [initialData, isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
-    onClose();
+    setError(null);
+    try {
+      await onSubmit(formData);
+      onClose();
+    } catch (err: any) {
+      console.error(err);
+      setError(getApiErrorMessage(err, 'Action failed. Please try again or check for duplicates.'));
+    }
   };
 
   return (
@@ -54,6 +75,12 @@ export function SubjectFormDialog({
               : 'Fill in the details below to add a new subject'}
           </DialogDescription>
         </DialogHeader>
+
+        {error && (
+          <div className="p-3 text-sm text-red-800 bg-red-100 border border-red-200 rounded-md">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
@@ -97,9 +124,9 @@ export function SubjectFormDialog({
               type="number"
               min="1"
               max="10"
-              value={formData.creditHours}
+              value={Number.isNaN(formData.creditHours) ? '' : formData.creditHours}
               onChange={(e) =>
-                setFormData({ ...formData, creditHours: parseInt(e.target.value) })
+                setFormData({ ...formData, creditHours: e.target.value ? parseInt(e.target.value) : 0 })
               }
               required
             />

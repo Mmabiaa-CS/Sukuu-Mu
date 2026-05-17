@@ -5,6 +5,13 @@ import { useSubjects } from '@/lib/use-subjects';
 import { SubjectFormDialog } from '@/components/subject-form-dialog';
 import { Subject } from '@/lib/types';
 import { Plus, Search, MoreHorizontal, Trash2, X } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function SubjectsPage() {
   const {
@@ -18,17 +25,17 @@ export default function SubjectsPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
-  const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const handleAddSubject = (data: Omit<Subject, 'id'>) => {
+  const handleAddSubject = async (data: Omit<Subject, 'id'>) => {
     setActionError(null);
     try {
-      addSubject(data);
+      await addSubject(data);
       setIsFormOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to add subject:', error);
-      setActionError('Could not create subject. Please try again.');
+      setActionError(error?.response?.data?.message || 'Could not create subject. Please try again.');
+      throw error; // Re-throw so the form dialog catches it and stays open
     }
   };
   const handleEditSubject = (subject: Subject) => { setEditingSubject(subject); setIsFormOpen(true); };
@@ -47,7 +54,7 @@ export default function SubjectsPage() {
   const stats = useMemo(() => {
     const safeList = filteredSubjects ?? [];
     const total = safeList.length;
-    const totalCredits = safeList.reduce((sum, s) => sum + ((s as any).creditHours || 0), 0);
+    const totalCredits = safeList.reduce((sum, s) => sum + (s.creditHours || 0), 0);
     const avgCredits = total > 0 ? Math.round(totalCredits / total) : 0;
     return { total, totalCredits, avgCredits };
   }, [filteredSubjects]);
@@ -130,16 +137,9 @@ export default function SubjectsPage() {
         .sp-credit-tag { display:inline-block; background:#e8f1fd; color:#1a5cb0; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:500; }
 
         /* ACTIONS */
-        .sp-actions-wrap { position:relative; display:inline-block; }
         .sp-menu-btn { width:30px; height:30px; border-radius:6px; border:1px solid transparent; background:none; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#bbb; transition:background 0.12s, border-color 0.12s, color 0.12s; }
         .sp-menu-btn:hover { background:#f4f4f3; border-color:#e4e4e2; color:#555; }
-        .sp-dropdown { position:absolute; right:0; top:calc(100% + 6px); background:#fff; border:1px solid #e4e4e2; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.09); min-width:160px; z-index:20; overflow:hidden; animation:sp-drop 0.15s ease; }
-        @keyframes sp-drop { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
-        .sp-dropdown-item { display:flex; align-items:center; gap:9px; padding:10px 14px; font-size:12px; color:#444; cursor:pointer; transition:background 0.1s; border:none; background:none; width:100%; text-align:left; font-family:'DM Sans',sans-serif; }
-        .sp-dropdown-item:hover { background:#f7f7f6; }
-        .sp-dropdown-item.danger { color:#c0392b; }
-        .sp-dropdown-item.danger:hover { background:#fef2f2; }
-        .sp-dropdown-divider { height:1px; background:#f0f0ee; margin:4px 0; }
+        .sp-menu-btn[data-state="open"] { background:#f4f4f3; border-color:#e4e4e2; color:#555; }
 
         .sp-empty { text-align:center; padding:60px 24px; }
         .sp-empty-icon { width:44px; height:44px; border-radius:50%; background:#f4f4f3; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; }
@@ -255,33 +255,24 @@ export default function SubjectsPage() {
                       <td><span className="sp-subject-name">{subject.name}</span></td>
                       <td><span className="sp-code">{subject.code}</span></td>
                       <td><span className="sp-muted">{subject.description || '—'}</span></td>
-                      <td><span className="sp-credit-tag">{(subject as any).creditHours ?? '—'} hrs</span></td>
+                      <td><span className="sp-credit-tag">{subject.creditHours ?? '—'} hrs</span></td>
                       <td>
-                        <div className="sp-actions-wrap">
-                          <button
-                            className="sp-menu-btn"
-                            onClick={() => setActiveMenu(activeMenu === subject.id ? null : subject.id)}
-                          >
-                            <MoreHorizontal size={15} />
-                          </button>
-                          {activeMenu === subject.id && (
-                            <div className="sp-dropdown">
-                              <button
-                                className="sp-dropdown-item"
-                                onClick={() => { setActiveMenu(null); handleEditSubject(subject); }}
-                              >
-                                Edit Subject
-                              </button>
-                              <div className="sp-dropdown-divider" />
-                              <button
-                                className="sp-dropdown-item danger"
-                                onClick={() => { setActiveMenu(null); handleDeleteSubject(subject.id); }}
-                              >
-                                <Trash2 size={13} /> Delete
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="sp-menu-btn">
+                              <MoreHorizontal size={15} />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditSubject(subject)}>
+                              Edit Subject
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-red-600 focus:bg-red-50 focus:text-red-700" onClick={() => handleDeleteSubject(subject.id)}>
+                              <Trash2 size={13} className="mr-2" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))}
@@ -292,22 +283,22 @@ export default function SubjectsPage() {
         </div>
       </div>
 
-      {activeMenu && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setActiveMenu(null)} />
-      )}
+
 
       <SubjectFormDialog
         isOpen={isFormOpen}
         onClose={handleFormClose}
         onSubmit={editingSubject
-          ? (data: Omit<Subject, 'id'>) => {
+          ? async (data: Omit<Subject, 'id'>) => {
             setActionError(null);
             try {
-              updateSubject({ id: editingSubject.id, updates: data });
+              await updateSubject({ id: editingSubject.id, updates: data });
               setEditingSubject(null);
-            } catch (error) {
+              setIsFormOpen(false);
+            } catch (error: any) {
               console.error('Failed to update subject:', error);
-              setActionError('Could not update subject. Please try again.');
+              setActionError(error?.response?.data?.message || 'Could not update subject. Please try again.');
+              throw error; // keep dialog open matching standard form behavior
             }
           }
           : handleAddSubject}

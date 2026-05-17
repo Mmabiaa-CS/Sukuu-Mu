@@ -20,6 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { getApiErrorMessage } from '@/lib/api-errors';
+import { formatDateForInput } from '@/lib/api-mappers';
 
 interface StudentFormDialogProps {
   isOpen: boolean;
@@ -45,22 +47,28 @@ export function StudentFormDialog({
     date_of_birth: '',
     address: '',
     class_id: '',
-    is_active: 1
+    gender: '',
+    enrollment_date: new Date().toISOString().split('T')[0],
+    is_active: 1,
   });
 
   useEffect(() => {
-    if (initialData) {
+    if (!isOpen) return;
+
+    if (initialData && isEditing) {
       setFormData({
         first_name: initialData.first_name || '',
         last_name: initialData.last_name || '',
         email: initialData.email || '',
         phone: initialData.phone || '',
-        date_of_birth: initialData.date_of_birth ? initialData.date_of_birth.split('T')[0] : '',
+        date_of_birth: formatDateForInput(initialData.date_of_birth),
         address: initialData.address || '',
-        class_id: initialData.class_id || '',
-        is_active: initialData.is_active ?? 1
+        class_id: initialData.class_id ?? '',
+        gender: initialData.gender || '',
+        enrollment_date: formatDateForInput(initialData.enrollment_date),
+        is_active: initialData.is_active ?? 1,
       });
-    } else {
+    } else if (!initialData) {
       setFormData({
         first_name: '',
         last_name: '',
@@ -69,15 +77,25 @@ export function StudentFormDialog({
         date_of_birth: '',
         address: '',
         class_id: '',
-        is_active: 1
+        gender: '',
+        enrollment_date: new Date().toISOString().split('T')[0],
+        is_active: 1,
       });
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, isEditing]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
-    onClose();
+    setError(null);
+    try {
+      await onSubmit(formData);
+      onClose();
+    } catch (err: any) {
+      console.error(err);
+      setError(getApiErrorMessage(err, 'Action failed. Please try again or check for duplicates.'));
+    }
   };
 
   return (
@@ -93,6 +111,12 @@ export function StudentFormDialog({
               : 'Fill in the details below to add a new student'}
           </DialogDescription>
         </DialogHeader>
+
+        {error && (
+          <div className="p-3 text-sm text-red-800 bg-red-100 border border-red-200 rounded-md">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
@@ -140,18 +164,45 @@ export function StudentFormDialog({
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Date of Birth</label>
+              <Input
+                type="date"
+                value={formData.date_of_birth || ''}
+                onChange={(e) =>
+                  setFormData({ ...formData, date_of_birth: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Enrollment Date *</label>
+              <Input
+                type="date"
+                value={formData.enrollment_date || ''}
+                onChange={(e) =>
+                  setFormData({ ...formData, enrollment_date: e.target.value })
+                }
+                required
+              />
+            </div>
+          </div>
+
           <div className="space-y-1">
-            <label className="text-sm font-medium">Date of Birth</label>
-            <Input
-              type="date"
-              value={formData.date_of_birth || ''}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  date_of_birth: e.target.value
-                })
-              }
-            />
+            <label className="text-sm font-medium">Gender</label>
+            <Select
+              value={formData.gender || ''}
+              onValueChange={(value) => setFormData({ ...formData, gender: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1">

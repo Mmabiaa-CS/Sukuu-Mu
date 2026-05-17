@@ -112,15 +112,28 @@ const getStudentPayments = async (student_id) => {
   };
 };
 
+const normalizePaymentMethod = (method) => {
+  const aliases = {
+    check: 'cheque',
+    transfer: 'bank_transfer',
+    online: 'other',
+    mobile: 'mobile_money',
+  };
+  const normalized = aliases[method] || method || 'cash';
+  const allowed = new Set(['cash', 'bank_transfer', 'mobile_money', 'cheque', 'other']);
+  return allowed.has(normalized) ? normalized : 'cash';
+};
+
 // ── Record a payment ───────────────────────────────────────────────────────
 const recordPayment = async (body, recorded_by) => {
   const {
     student_id, student_name,
     fee_structure_id, fee_structure_name,
     amount_paid, total_fee,
-    payment_date, payment_method,
+    payment_date, payment_method: rawPaymentMethod,
     reference, notes,
   } = body;
+  const payment_method = normalizePaymentMethod(rawPaymentMethod);
 
   // 1. Resolve student
   const studentIdentifier = student_id || student_name;
@@ -154,6 +167,12 @@ const recordPayment = async (body, recorded_by) => {
     resolvedTotalFee = total_fee || structure.total_fee;
   }
 
+  // Ad-hoc payments (total only) still need a ledger row on the finances list
+  if (!resolvedStructureId && resolvedTotalFee) {
+    const general = await feeRepository.findOrCreateGeneralFeeStructure();
+    resolvedStructureId = general.id;
+  }
+
   // 3. Validate amounts
   if (!amount_paid || isNaN(amount_paid) || Number(amount_paid) <= 0) {
     const err = new Error('amount_paid must be a positive number');
@@ -173,13 +192,30 @@ const recordPayment = async (body, recorded_by) => {
     throw err;
   }
 
-  // 4. Get existing balance to check for overpayment
-  const existingBalance = await feeRepository.getStudentBalance(student.id);
-  const currentBalance = existingBalance.balance !== null
-    ? Number(existingBalance.balance)
-    : Number(resolvedTotalFee);
+  // 4. Ensure student fee ledger row exists and check balance
+  if (resolvedStructureId) {
+    const ledger = await feeRepository.findExistingStudentFee(student.id, resolvedStructureId);
+    if (!ledger) {
+      await feeRepository.createStudentFee({
+        student_id: student.id,
+        fee_structure_id: resolvedStructureId,
+        total_fee: Number(resolvedTotalFee),
+      });
+    }
+  }
 
-  if (Number(amount_paid) > currentBalance && existingBalance.total_payments > 0) {
+  let currentBalance = Number(resolvedTotalFee);
+  if (resolvedStructureId) {
+    const ledger = await feeRepository.findExistingStudentFee(student.id, resolvedStructureId);
+    if (ledger) currentBalance = Number(ledger.balance);
+  } else {
+    const existingBalance = await feeRepository.getStudentBalance(student.id);
+    if (Number(existingBalance.total_payments) > 0) {
+      currentBalance = Number(existingBalance.balance);
+    }
+  }
+
+  if (Number(amount_paid) > currentBalance) {
     const err = new Error(
       `Payment of ${amount_paid} exceeds remaining balance of ${currentBalance}`
     );
@@ -192,13 +228,19 @@ const recordPayment = async (body, recorded_by) => {
     student_id: student.id,
     fee_structure_id: resolvedStructureId,
     amount_paid: Number(amount_paid),
-    total_fee: Number(resolvedTotalFee),
     payment_date: payment_date || new Date(),
     payment_method,
     reference,
     notes,
-    recorded_by,
   });
+
+  if (resolvedStructureId) {
+    await feeRepository.updateStudentFeeBalance(
+      student.id,
+      resolvedStructureId,
+      Number(amount_paid)
+    );
+  }
 
   // 6. Get updated balance
   const updatedBalance = await feeRepository.getStudentBalance(student.id);
@@ -450,39 +492,7 @@ const generateReceipt = async (payment_id) => {
 
 // ── Fee reports ────────────────────────────────────────────────────────────
 const getFeeReport = async ({ academic_year, term, class_id }) => {
-  // Total collected, outstanding, cleared per class
-  const [rows] = await pool.execute(
-    `SELECT
-       c.id                          AS class_id,
-       c.name                        AS class_name,
-       fs.academic_year,
-       fs.term,
-       fs.name                       AS structure_name,
-       COUNT(sf.student_id)          AS total_students,
-       SUM(sf.total_fee)             AS total_billed,
-       SUM(sf.total_paid)            AS total_collected,
-       SUM(sf.balance)               AS total_outstanding,
-       SUM(sf.is_cleared)            AS total_cleared,
-       COUNT(sf.student_id) - SUM(sf.is_cleared) AS total_pending,
-       ROUND(
-         (SUM(sf.total_paid) / NULLIF(SUM(sf.total_fee), 0)) * 100, 2
-       )                             AS collection_percentage
-     FROM student_fees sf
-     JOIN students s     ON sf.student_id       = s.id
-     JOIN classes c      ON s.class_id          = c.id
-     JOIN fee_structures fs ON sf.fee_structure_id = fs.id
-     WHERE
-       (? IS NULL OR fs.academic_year = ?) AND
-       (? IS NULL OR fs.term          = ?) AND
-       (? IS NULL OR c.id             = ?)
-     GROUP BY c.id, fs.id
-     ORDER BY c.name, fs.term`,
-    [
-      academic_year || null, academic_year || null,
-      term || null, term || null,
-      class_id || null, class_id || null,
-    ]
-  );
+  const rows = await feeRepository.findFeeReportSummary({ academic_year, term, class_id });
 
   // Overall totals
   const totals = rows.reduce((acc, row) => ({
@@ -510,42 +520,7 @@ const getFeeReport = async ({ academic_year, term, class_id }) => {
 
 // ── Outstanding balances report ────────────────────────────────────────────
 const getOutstandingReport = async ({ academic_year, term, class_id }) => {
-  const [rows] = await pool.execute(
-    `SELECT
-       s.id              AS student_id,
-       s.student_code,
-       s.first_name,
-       s.last_name,
-       c.name            AS class_name,
-       fs.name           AS structure_name,
-       fs.term,
-       fs.academic_year,
-       sf.total_fee,
-       sf.total_paid,
-       sf.balance,
-       sf.due_date,
-       p.first_name      AS parent_first_name,
-       p.last_name       AS parent_last_name,
-       p.phone           AS parent_phone
-     FROM student_fees sf
-     JOIN students s        ON sf.student_id       = s.id
-     JOIN classes c         ON s.class_id          = c.id
-     JOIN fee_structures fs ON sf.fee_structure_id = fs.id
-     LEFT JOIN parent_students ps ON ps.student_id = s.id AND ps.is_primary = 1
-     LEFT JOIN parents p    ON ps.parent_id        = p.id
-     WHERE
-       sf.is_cleared = 0 AND
-       sf.balance    > 0 AND
-       (? IS NULL OR fs.academic_year = ?) AND
-       (? IS NULL OR fs.term          = ?) AND
-       (? IS NULL OR c.id             = ?)
-     ORDER BY sf.balance DESC, c.name`,
-    [
-      academic_year || null, academic_year || null,
-      term || null, term || null,
-      class_id || null, class_id || null,
-    ]
-  );
+  const rows = await feeRepository.findOutstandingReport({ academic_year, term, class_id });
 
   const total_outstanding = rows.reduce((sum, r) => sum + Number(r.balance), 0);
 

@@ -14,6 +14,7 @@ export function useFinances() {
       const response = await apiClient.get('/fees/student-fees');
       return response.data.data || response.data;
     },
+    retry: 1,
   });
 
   // All payments
@@ -23,6 +24,7 @@ export function useFinances() {
       const response = await apiClient.get('/fees');
       return response.data.data || response.data;
     },
+    retry: 1,
   });
 
   // Fee structures
@@ -32,6 +34,7 @@ export function useFinances() {
       const response = await apiClient.get('/fees/structures');
       return response.data.data || response.data;
     },
+    retry: 1,
   });
 
   // Record payment
@@ -40,8 +43,13 @@ export function useFinances() {
       const response = await apiClient.post('/fees/pay', paymentData);
       return response.data.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['payments'] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['payments'] }),
+        queryClient.refetchQueries({ queryKey: ['student-fees'] }),
+        queryClient.refetchQueries({ queryKey: ['fee-report'] }),
+        queryClient.refetchQueries({ queryKey: ['fee-structures'] }),
+      ]);
     },
   });
 
@@ -52,6 +60,7 @@ export function useFinances() {
       const response = await apiClient.get('/fees/reports/summary');
       return response.data.data;
     },
+    retry: 1,
   });
 
   const getStudentFees = (studentId: string) => {

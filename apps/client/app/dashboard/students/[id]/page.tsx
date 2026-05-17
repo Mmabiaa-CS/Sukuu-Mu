@@ -1,266 +1,80 @@
 'use client';
 
-import { useAuth } from '@/lib/auth-context';
-import { useRouter, useParams } from 'next/navigation';
-import { useFinances } from '@/lib/use-finances';
-import { useStudents } from '@/lib/use-students';
+import { useParams } from 'next/navigation';
+import { useStudent } from '@/lib/use-student';
 import { useClasses } from '@/lib/use-classes';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { AlertCircle, User, DollarSign, Calendar } from 'lucide-react';
+import { EntityProfileView } from '@/components/entity-profile-view';
+import { getApiErrorMessage } from '@/lib/api-errors';
+import { AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 
 export default function StudentProfilePage() {
-  const { user } = useAuth();
-  const router = useRouter();
   const params = useParams();
   const studentId = params.id as string;
+  const { data: student, isLoading, error } = useStudent(studentId);
+  const { classes } = useClasses();
 
-  const { getStudentBalance, getStudentPayments, getStudentFees } = useFinances();
-  const { fetchStudentAttendance } = useAttendance();
-  const { getStudentById, isLoading: studentsLoading } = useStudents();
-  const { classes, isLoading: classesLoading } = useClasses();
-
-  const student = getStudentById(studentId);
-  const studentClass = student ? classes.find(c => c.id === student.class_id) : null;
-
-  if (!user) {
-    router.push('/login');
-    return null;
-  }
-
-  if (!student) {
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <AlertCircle className="mx-auto mb-4 h-12 w-12 text-destructive" />
-          <h2 className="text-xl font-semibold mb-2">Student Not Found</h2>
-          <p className="text-muted-foreground mb-4">The student you&apos;re looking for doesn&apos;t exist.</p>
-          <Button onClick={() => router.push('/dashboard/students')}>Back to Students</Button>
-        </div>
+      <div className="flex min-h-[50vh] items-center justify-center text-sm text-[#888]">
+        Loading student profile…
       </div>
     );
   }
 
-  // Check permissions
-  if (!canViewFinances(user, studentId)) {
+  if (error || !student) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <AlertCircle className="mx-auto mb-4 h-12 w-12 text-destructive" />
-          <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-          <p className="text-muted-foreground">You don&apos;t have permission to view this student&apos;s profile.</p>
-        </div>
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-6 text-center">
+        <AlertCircle className="h-12 w-12 text-red-500" />
+        <h2 className="text-xl font-semibold">Student not found</h2>
+        <p className="max-w-md text-sm text-[#888]">
+          {error ? getApiErrorMessage(error) : 'This student could not be loaded.'}
+        </p>
+        <Link
+          href="/dashboard/students"
+          className="rounded-lg bg-[#0a0a0a] px-5 py-2.5 text-sm font-medium text-white"
+        >
+          Back to students
+        </Link>
       </div>
     );
   }
 
-  const financialData = getStudentBalance(studentId);
-  const studentPayments = getStudentPayments(studentId);
-  const studentFees = getStudentFees(studentId);
-  const attendanceRecords = getStudentAttendance(studentId);
-  const attendanceStats = getAttendanceStats(studentId);
+  const studentClass = student.class_id
+    ? classes.find((c) => c.id === Number(student.class_id))
+    : null;
 
-  const age = new Date().getFullYear() - (student.date_of_birth ? new Date(student.date_of_birth).getFullYear() : 0);
+  const fullName = `${student.first_name} ${student.last_name}`.trim();
+  const initials = `${student.first_name?.[0] ?? ''}${student.last_name?.[0] ?? ''}`.toUpperCase();
+
+  const formatDate = (value?: string) => {
+    if (!value) return '—';
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString();
+  };
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">{student.first_name} {student.last_name}</h1>
-          <p className="text-muted-foreground mt-2">ID: {student.id}</p>
-        </div>
-        <Button variant="outline" onClick={() => router.push('/dashboard/students')}>Back</Button>
-      </div>
-
-      {/* Student Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Student Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <p className="text-sm text-muted-foreground">Email</p>
-            <p className="text-lg font-medium">{student.email}</p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Phone</p>
-            <p className="text-lg font-medium">{student.phone || 'N/A'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Date of Birth</p>
-            <p className="text-lg font-medium">
-              {student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : 'N/A'} {age > 0 && `(${age} years old)`}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Class</p>
-            <p className="text-lg font-medium">{studentClass?.name || 'N/A'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Status</p>
-            <Badge className="mt-1">{student.status}</Badge>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Enrollment Date</p>
-            <p className="text-lg font-medium">{student.enrollment_date}</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Financial Dashboard */}
-      {canViewFinances(user, studentId) && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Total Fees</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">${financialData.totalFees.toLocaleString()}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Amount Paid</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">${financialData.totalPaid.toLocaleString()}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Balance Due</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${financialData.balance > 0 ? 'text-amber-600' : 'text-green-600'}`}>
-                  ${financialData.balance.toLocaleString()}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Fees Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Fee Records
-              </CardTitle>
-              <CardDescription>Student fee and payment history</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {studentFees.map((fee) => (
-                    <TableRow key={fee.id}>
-                      <TableCell>{fee.description}</TableCell>
-                      <TableCell>${fee.amount.toLocaleString()}</TableCell>
-                      <TableCell>{fee.dueDate.toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <Badge className={fee.status === 'paid' ? 'bg-green-100 text-green-800' : fee.status === 'partial' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}>
-                          {fee.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          {/* Payments Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Method</TableHead>
-                    <TableHead>Receipt #</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {studentPayments.map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell>{payment.paymentDate.toLocaleDateString()}</TableCell>
-                      <TableCell>${payment.amount.toLocaleString()}</TableCell>
-                      <TableCell className="capitalize">{payment.paymentMethod}</TableCell>
-                      <TableCell>{payment.receiptNumber}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </>
-      )}
-
-      {/* Attendance Dashboard */}
-      {canViewAttendance(user, studentClass?.id) && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Total Days</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{attendanceStats.total}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Present</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{attendanceStats.present}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Absent</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{attendanceStats.absent}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Percentage</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{attendanceStats.percentage}%</div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-    </div>
+    <EntityProfileView
+      theme="student"
+      eyebrow="Student profile"
+      title={fullName}
+      subtitle={student.student_code ? `ID: ${student.student_code}` : `Record #${student.id}`}
+      initials={initials || '?'}
+      statusLabel={student.is_active === 1 ? 'Active' : 'Inactive'}
+      statusActive={student.is_active === 1}
+      backHref="/dashboard/students"
+      backLabel="Back to students"
+      fields={[
+        { label: 'Student code', value: student.student_code },
+        { label: 'Email', value: student.email },
+        { label: 'Phone', value: student.phone },
+        { label: 'Class', value: studentClass?.name ?? (student.class_id ? `Class #${student.class_id}` : '—') },
+        { label: 'Gender', value: student.gender },
+        { label: 'Date of birth', value: formatDate(student.date_of_birth) },
+        { label: 'Enrollment date', value: formatDate(student.enrollment_date) },
+        { label: 'Address', value: student.address },
+        { label: 'System ID', value: String(student.id) },
+      ]}
+    />
   );
 }

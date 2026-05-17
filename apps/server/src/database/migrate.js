@@ -18,6 +18,24 @@ async function runMigrations() {
 
         await connection.query(sql);
 
+        const patchesPath = path.join(__dirname, 'patches.sql');
+        if (fs.existsSync(patchesPath)) {
+            const patchStatements = fs
+                .readFileSync(patchesPath, 'utf8')
+                .split(';')
+                .map((s) => s.trim())
+                .filter((s) => s.length > 0 && !s.startsWith('--'));
+
+            for (const statement of patchStatements) {
+                try {
+                    await connection.query(statement);
+                } catch (error) {
+                    if (error.code === 'ER_DUP_FIELDNAME') continue;
+                    throw error;
+                }
+            }
+        }
+
         console.log('✅ Migrations completed successfully.');
     } catch (error) {
         console.error('❌ Migration failed:', error.message);

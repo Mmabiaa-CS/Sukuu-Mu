@@ -43,7 +43,7 @@ const findAll = async ({ limit, offset, search }) => {
 
   query += ` ORDER BY t.created_at DESC`;
 
-  const limitInt  = parseInt(limit, 10);
+  const limitInt = parseInt(limit, 10);
   const offsetInt = parseInt(offset, 10);
   query += ` LIMIT ${limitInt} OFFSET ${offsetInt}`;
 
@@ -133,17 +133,17 @@ const create = async ({
         address, date_of_birth, join_date, qualification, is_active, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())`,
     [
-      user_id       !== undefined ? user_id       : null,
+      user_id !== undefined ? user_id : null,
       employee_id,
       first_name,
       last_name,
       email,
-      phone         !== undefined ? phone         : null,
-      gender        !== undefined ? gender        : null,
-      address       !== undefined ? address       : null,
-      date_of_birth !== undefined ? date_of_birth : null,
-      join_date     !== undefined ? join_date     : null,
-      qualification !== undefined ? qualification : null,
+      phone !== undefined && phone !== '' ? phone : null,
+      gender !== undefined && gender !== '' ? gender : null,
+      address !== undefined && address !== '' ? address : null,
+      date_of_birth !== undefined && date_of_birth !== '' ? date_of_birth : null,
+      join_date !== undefined && join_date !== '' ? join_date : null,
+      qualification !== undefined && qualification !== '' ? qualification : null,
     ]
   );
   return findById(result.insertId);
@@ -168,16 +168,16 @@ const update = async (id, {
        updated_at    = NOW()
      WHERE id = ?`,
     [
-      first_name    !== undefined ? first_name    : null,
-      last_name     !== undefined ? last_name     : null,
-      email         !== undefined ? email         : null,
-      phone         !== undefined ? phone         : null,
-      gender        !== undefined ? gender        : null,
-      address       !== undefined ? address       : null,
-      date_of_birth !== undefined ? date_of_birth : null,
-      join_date     !== undefined ? join_date     : null,
-      qualification !== undefined ? qualification : null,
-      is_active     !== undefined ? is_active     : null,
+      first_name !== undefined ? first_name : null,
+      last_name !== undefined ? last_name : null,
+      email !== undefined ? email : null,
+      phone !== undefined && phone !== '' ? phone : null,
+      gender !== undefined && gender !== '' ? gender : null,
+      address !== undefined && address !== '' ? address : null,
+      date_of_birth !== undefined && date_of_birth !== '' ? date_of_birth : null,
+      join_date !== undefined && join_date !== '' ? join_date : null,
+      qualification !== undefined && qualification !== '' ? qualification : null,
+      is_active !== undefined ? is_active : null,
       id,
     ]
   );
@@ -262,7 +262,7 @@ const findSubjectByIdNameOrCode = async (value) => {
 
 const findTeacherClass = async (teacher_id, class_id) => {
   const [rows] = await pool.execute(
-    `SELECT id FROM teacher_classes
+    `SELECT teacher_id, class_id FROM teacher_classes
      WHERE teacher_id = ? AND class_id = ? LIMIT 1`,
     [teacher_id, class_id]
   );
@@ -271,11 +271,11 @@ const findTeacherClass = async (teacher_id, class_id) => {
 
 const assignClass = async (teacher_id, class_id) => {
   const [result] = await pool.execute(
-    `INSERT INTO teacher_classes (teacher_id, class_id, created_at)
-     VALUES (?, ?, NOW())`,
+    `INSERT IGNORE INTO teacher_classes (teacher_id, class_id)
+     VALUES (?, ?)`,
     [teacher_id, class_id]
   );
-  return result.insertId;
+  return result.affectedRows;
 };
 
 const removeClassAssignment = async (teacher_id, class_id) => {
@@ -310,7 +310,7 @@ const findClassesByTeacherId = async (teacher_id) => {
 
 const findTeacherSubject = async (teacher_id, subject_id) => {
   const [rows] = await pool.execute(
-    `SELECT id FROM teacher_subjects
+    `SELECT teacher_id, subject_id FROM teacher_subjects
      WHERE teacher_id = ? AND subject_id = ? LIMIT 1`,
     [teacher_id, subject_id]
   );
@@ -319,11 +319,33 @@ const findTeacherSubject = async (teacher_id, subject_id) => {
 
 const assignSubject = async (teacher_id, subject_id) => {
   const [result] = await pool.execute(
-    `INSERT INTO teacher_subjects (teacher_id, subject_id, created_at)
-     VALUES (?, ?, NOW())`,
+    `INSERT IGNORE INTO teacher_subjects (teacher_id, subject_id)
+     VALUES (?, ?)`,
     [teacher_id, subject_id]
   );
-  return result.insertId;
+  return result.affectedRows;
+};
+
+const syncSubjects = async (teacher_id, subjectIds = []) => {
+  await pool.execute('DELETE FROM teacher_subjects WHERE teacher_id = ?', [teacher_id]);
+  const ids = [...new Set(subjectIds.map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+  for (const subject_id of ids) {
+    await pool.execute(
+      'INSERT INTO teacher_subjects (teacher_id, subject_id) VALUES (?, ?)',
+      [teacher_id, subject_id]
+    );
+  }
+};
+
+const syncClasses = async (teacher_id, classIds = []) => {
+  await pool.execute('DELETE FROM teacher_classes WHERE teacher_id = ?', [teacher_id]);
+  const ids = [...new Set(classIds.map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+  for (const class_id of ids) {
+    await pool.execute(
+      'INSERT INTO teacher_classes (teacher_id, class_id) VALUES (?, ?)',
+      [teacher_id, class_id]
+    );
+  }
 };
 
 const removeSubjectAssignment = async (teacher_id, subject_id) => {
@@ -374,4 +396,6 @@ module.exports = {
   assignSubject,
   removeSubjectAssignment,
   findSubjectsByTeacherId,
+  syncSubjects,
+  syncClasses,
 };

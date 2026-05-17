@@ -5,7 +5,7 @@ const subjectRepository = require('./subject.repository');
 // ── Get all subjects ───────────────────────────────────────────────────────
 const getAllSubjects = async (query) => {
   const page   = Math.max(parseInt(query.page)  || 1, 1);
-  const limit  = Math.min(parseInt(query.limit) || 10, 100);
+  const limit  = Math.min(parseInt(query.limit, 10) || 100, 500);
   const offset = (page - 1) * limit;
   const search = query.search?.trim() || null;
 
