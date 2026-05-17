@@ -55,6 +55,18 @@ const findStructureByIdOrName = async (value) => {
   return rows[0] || null;
 };
 
+const GENERAL_FEE_STRUCTURE_NAME = 'General Fees';
+
+const findOrCreateGeneralFeeStructure = async () => {
+  const existing = await findStructureByIdOrName(GENERAL_FEE_STRUCTURE_NAME);
+  if (existing) return existing;
+  return createStructure({
+    name: GENERAL_FEE_STRUCTURE_NAME,
+    total_fee: 1,
+    description: 'Ad-hoc and one-off student charges',
+  });
+};
+
 const createStructure = async ({
   name, total_fee, term, academic_year, description,
 }) => {
@@ -648,6 +660,7 @@ module.exports = {
   updateStructure,
   findStructureById,
   findStructureByIdOrName,
+  findOrCreateGeneralFeeStructure,
   createStructure,
   findStudentsByClassIds,
   findExistingStudentFee,

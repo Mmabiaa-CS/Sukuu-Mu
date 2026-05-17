@@ -43,10 +43,13 @@ export function useFinances() {
       const response = await apiClient.post('/fees/pay', paymentData);
       return response.data.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['payments'] });
-      queryClient.invalidateQueries({ queryKey: ['student-fees'] });
-      queryClient.invalidateQueries({ queryKey: ['fee-report'] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['payments'] }),
+        queryClient.refetchQueries({ queryKey: ['student-fees'] }),
+        queryClient.refetchQueries({ queryKey: ['fee-report'] }),
+        queryClient.refetchQueries({ queryKey: ['fee-structures'] }),
+      ]);
     },
   });
 

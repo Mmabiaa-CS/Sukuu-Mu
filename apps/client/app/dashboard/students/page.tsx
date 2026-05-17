@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Student } from '@/lib/types';
 import { useStudents } from '@/lib/use-students';
+import { apiClient } from '@/lib/api-client';
+import { mapStudentFromApi } from '@/lib/api-mappers';
 import { StudentFormDialog } from '@/components/student-form-dialog';
 import { canManageStudents, filterStudentsByAccess } from '@/lib/permissions';
 import { useClasses } from '@/lib/use-classes';
@@ -61,7 +63,17 @@ export default function StudentsPage() {
       throw error;
     }
   };
-  const handleEditStudent = (student: Student) => { setEditingStudent(student); setIsFormOpen(true); };
+  const handleEditStudent = async (student: Student) => {
+    setActionError(null);
+    try {
+      const response = await apiClient.get(`/students/${student.id}`);
+      const row = response.data?.data ?? response.data;
+      setEditingStudent(mapStudentFromApi(row as Record<string, unknown>));
+    } catch {
+      setEditingStudent(student);
+    }
+    setIsFormOpen(true);
+  };
   const handleFormClose = () => { setIsFormOpen(false); setEditingStudent(null); };
   const handleDeleteStudent = async (id: number) => {
     if (!confirm('Are you sure you want to delete this student?')) return;

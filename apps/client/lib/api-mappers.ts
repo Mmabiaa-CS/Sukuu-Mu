@@ -1,5 +1,20 @@
 import { Class, Student, Subject, Teacher } from './types';
 
+/** Normalize API/MySQL date values for HTML date inputs (YYYY-MM-DD). */
+export function formatDateForInput(value: unknown): string {
+  if (value == null || value === '') return '';
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().split('T')[0];
+  }
+  const s = String(value);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const parsed = new Date(s);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().split('T')[0];
+  }
+  return '';
+}
+
 export function mapClassFromApi(row: Record<string, unknown>): Class {
   const id = Number(row.id);
   const name = String(row.name ?? '');
@@ -57,12 +72,12 @@ export function mapStudentFromApi(row: Record<string, unknown>): Student {
     last_name: String(row.last_name ?? ''),
     email: String(row.email ?? ''),
     phone: row.phone != null ? String(row.phone) : undefined,
-    date_of_birth: row.date_of_birth != null ? String(row.date_of_birth) : undefined,
+    date_of_birth: row.date_of_birth != null ? formatDateForInput(row.date_of_birth) : undefined,
     address: row.address != null ? String(row.address) : undefined,
     class_id: row.class_id != null ? Number(row.class_id) : undefined,
     class_name: row.class_name != null ? String(row.class_name) : undefined,
     gender: row.gender != null ? String(row.gender) : undefined,
-    enrollment_date: row.enrollment_date != null ? String(row.enrollment_date) : undefined,
+    enrollment_date: row.enrollment_date != null ? formatDateForInput(row.enrollment_date) : undefined,
     is_active: Number(row.is_active ?? 1),
   };
 }
@@ -78,7 +93,9 @@ export function studentToApiPayload(
   if (student.date_of_birth !== undefined) payload.date_of_birth = student.date_of_birth;
   if (student.address !== undefined) payload.address = student.address;
   if (student.class_id !== undefined) payload.class_id = student.class_id;
-  if (student.enrollment_date !== undefined) payload.enrollment_date = student.enrollment_date;
+  if (student.enrollment_date !== undefined && student.enrollment_date !== '') {
+    payload.enrollment_date = student.enrollment_date;
+  }
   if (student.gender !== undefined) payload.gender = student.gender;
   if (student.is_active !== undefined) payload.is_active = student.is_active;
   return payload;

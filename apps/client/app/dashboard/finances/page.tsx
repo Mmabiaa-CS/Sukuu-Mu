@@ -342,9 +342,10 @@ export default function FinancesPage() {
                   onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value as any })}
                 >
                   <option value="cash">Cash</option>
-                  <option value="check">Check</option>
-                  <option value="transfer">Bank Transfer</option>
-                  <option value="online">Online</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="mobile_money">Mobile Money</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
               <div className="fp-field">

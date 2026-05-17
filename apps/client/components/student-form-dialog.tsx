@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { getApiErrorMessage } from '@/lib/api-errors';
+import { formatDateForInput } from '@/lib/api-mappers';
 
 interface StudentFormDialogProps {
   isOpen: boolean;
@@ -52,22 +53,22 @@ export function StudentFormDialog({
   });
 
   useEffect(() => {
-    if (initialData) {
+    if (!isOpen) return;
+
+    if (initialData && isEditing) {
       setFormData({
         first_name: initialData.first_name || '',
         last_name: initialData.last_name || '',
         email: initialData.email || '',
         phone: initialData.phone || '',
-        date_of_birth: initialData.date_of_birth ? initialData.date_of_birth.split('T')[0] : '',
+        date_of_birth: formatDateForInput(initialData.date_of_birth),
         address: initialData.address || '',
-        class_id: initialData.class_id || '',
+        class_id: initialData.class_id ?? '',
         gender: initialData.gender || '',
-        enrollment_date: initialData.enrollment_date
-          ? String(initialData.enrollment_date).split('T')[0]
-          : new Date().toISOString().split('T')[0],
+        enrollment_date: formatDateForInput(initialData.enrollment_date),
         is_active: initialData.is_active ?? 1,
       });
-    } else {
+    } else if (!initialData) {
       setFormData({
         first_name: '',
         last_name: '',
@@ -81,7 +82,7 @@ export function StudentFormDialog({
         is_active: 1,
       });
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, isEditing]);
 
   const [error, setError] = useState<string | null>(null);
 

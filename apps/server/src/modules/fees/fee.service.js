@@ -112,15 +112,28 @@ const getStudentPayments = async (student_id) => {
   };
 };
 
+const normalizePaymentMethod = (method) => {
+  const aliases = {
+    check: 'cheque',
+    transfer: 'bank_transfer',
+    online: 'other',
+    mobile: 'mobile_money',
+  };
+  const normalized = aliases[method] || method || 'cash';
+  const allowed = new Set(['cash', 'bank_transfer', 'mobile_money', 'cheque', 'other']);
+  return allowed.has(normalized) ? normalized : 'cash';
+};
+
 // ── Record a payment ───────────────────────────────────────────────────────
 const recordPayment = async (body, recorded_by) => {
   const {
     student_id, student_name,
     fee_structure_id, fee_structure_name,
     amount_paid, total_fee,
-    payment_date, payment_method,
+    payment_date, payment_method: rawPaymentMethod,
     reference, notes,
   } = body;
+  const payment_method = normalizePaymentMethod(rawPaymentMethod);
 
   // 1. Resolve student
   const studentIdentifier = student_id || student_name;
@@ -152,6 +165,12 @@ const recordPayment = async (body, recorded_by) => {
     resolvedStructureId = structure.id;
     // Use structure total_fee if not manually provided
     resolvedTotalFee = total_fee || structure.total_fee;
+  }
+
+  // Ad-hoc payments (total only) still need a ledger row on the finances list
+  if (!resolvedStructureId && resolvedTotalFee) {
+    const general = await feeRepository.findOrCreateGeneralFeeStructure();
+    resolvedStructureId = general.id;
   }
 
   // 3. Validate amounts
