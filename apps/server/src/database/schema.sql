@@ -75,6 +75,15 @@ CREATE TABLE IF NOT EXISTS students (
   FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE SET NULL
 );
 
+-- 12. Student ID sequences (for programmatic student_code generation)
+-- Holds the last used sequence per academic year. The bulk import code
+-- expects this table to exist and uses `academic_year` as a unique key.
+CREATE TABLE IF NOT EXISTS student_id_sequences (
+  academic_year VARCHAR(20) NOT NULL PRIMARY KEY,
+  last_sequence INT NOT NULL DEFAULT 0,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- 6. Subjects
 CREATE TABLE IF NOT EXISTS subjects (
   id INT AUTO_INCREMENT PRIMARY KEY,
