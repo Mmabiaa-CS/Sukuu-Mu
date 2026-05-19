@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         error.response?.data?.message ||
         (error.message === 'Network Error'
           ? 'Cannot connect to server. Is it running?'
-          : 'Invalid credentials');
+          : error.message || 'Invalid credentials');
       throw new Error(msg);
     } finally {
       setIsLoading(false);

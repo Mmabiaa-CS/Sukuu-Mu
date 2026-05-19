@@ -6,7 +6,48 @@ const router = express.Router();
 const studentController = require('./student.controller');
 const { authenticate, authorize } = require('../../middleware/auth.middleware');
 
+const bulkController  = require('./student.bulk.controller');
+const { handleUpload } = require('../../middleware/upload.middleware');
+ 
+// All routes require authentication — same as before
 router.use(authenticate);
+ 
+// ════════════════════════════════════════════════════════════════════════════
+// BULK ADMISSION ROUTES
+// Must be declared BEFORE /:id to avoid Express treating "bulk" as an id param
+// ════════════════════════════════════════════════════════════════════════════
+ 
+// GET  /students/bulk/template       — download CSV template
+router.get('/bulk/template',
+  authorize('admin', 'teacher'),
+  bulkController.downloadTemplate
+);
+ 
+// POST /students/bulk/preview         — preview JSON payload
+router.post('/bulk/preview',
+  authorize('admin', 'teacher'),
+  bulkController.previewFromJSON
+);
+ 
+// POST /students/bulk/preview/upload  — preview .csv or .xlsx file
+router.post('/bulk/preview/upload',
+  authorize('admin', 'teacher'),
+  handleUpload,
+  bulkController.previewFromFile
+);
+ 
+// POST /students/bulk/import          — commit JSON payload
+router.post('/bulk/import',
+  authorize('admin', 'teacher'),
+  bulkController.importFromJSON
+);
+ 
+// POST /students/bulk/import/upload   — commit .csv or .xlsx file
+router.post('/bulk/import/upload',
+  authorize('admin', 'teacher'),
+  handleUpload,
+  bulkController.importFromFile
+);
 
 // ── Search — MUST be before /:id ───────────────────────────────────────────
 router.get('/search', studentController.searchStudents);
